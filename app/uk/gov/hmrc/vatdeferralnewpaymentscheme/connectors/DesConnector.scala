@@ -18,12 +18,12 @@ class DesConnector @Inject() (http: HttpClient, servicesConfig: ServicesConfig) 
   lazy val serviceURL = servicesConfig.baseUrl("des-service")
 
   def getObligations(vrn: String)(implicit hc: HeaderCarrier) = {
-    val url: String = s"${serviceURL}/des/enterprise/obligation-data/vrn/$vrn/VATC?from=2020-04-01&to=2021-07-01&status=O"
+    val url: String = s"${serviceURL}/des/enterprise/obligation-data/vrn/$vrn/VATC?from=2016-04-06&to=2020-04-06&status=O"
     http.GET[ObligationData](url)
   }
 
   def getFinancialData(vrn: String)(implicit hc: HeaderCarrier) = {
-    val url: String = s"${serviceURL}/des/enterprise/financial-data/VRN/$vrn/VATC?dateFrom=2015-12-12&dateTo=2016-12-12&onlyOpenItems=true&includeLocks=true&calculateAccruedInterest=true&customerPaymentInformation=true"
+    val url: String = s"${serviceURL}/des/enterprise/financial-data/VRN/$vrn/VATC?dateFrom=2020-03-20&dateTo=2020-06-30&onlyOpenItems=true&includeLocks=true&calculateAccruedInterest=true&customerPaymentInformation=true"
     http.GET[FinancialData](url)
   }
 }

@@ -10,8 +10,8 @@ import play.api.libs.json.Json
 case class FinancialTransactions (
   chargeType: String,
   mainType: String,
-  periodKey: String,
-  periodKeyDescription: String,
+  periodKey: Option[String],
+  periodKeyDescription: Option[String],
   taxPeriodFrom: String,
   taxPeriodTo: String,
   businessPartner: String,
@@ -24,10 +24,10 @@ case class FinancialTransactions (
   chargeReference: String,
   mainTransaction: String,
   subTransaction: String,
-  originalAmount: Int,
-  outstandingAmount: Int,
-  clearedAmount: Int,
-  accruedInterest: Int,
+  originalAmount: BigDecimal,
+  outstandingAmount: BigDecimal,
+  clearedAmount: Option[BigDecimal],
+  accruedInterest: Option[BigDecimal],
   items: Seq[Items])
 
 object FinancialTransactions {

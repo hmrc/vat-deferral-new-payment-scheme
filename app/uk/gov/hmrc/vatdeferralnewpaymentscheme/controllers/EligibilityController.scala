@@ -14,6 +14,7 @@ import uk.gov.hmrc.http.HttpClient
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.eligibility.EligibilityResponse
 import play.api.libs.json.Json
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.DesConnector
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.FinancialDataService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -23,7 +24,8 @@ class EligibilityController @Inject()(http: HttpClient,
       appConfig: AppConfig,
       cc: ControllerComponents,
       paymentPlanStore: PaymentPlanStore,
-      desConnector: DesConnector)
+      desConnector: DesConnector,
+      financialDataService: FinancialDataService)
     extends BackendController(cc) {
 
   def get(vrn: String): Action[AnyContent] = Action.async { implicit request =>
@@ -31,9 +33,9 @@ class EligibilityController @Inject()(http: HttpClient,
     for {
       paymentPlanExists <- paymentPlanStore.exists(vrn)
       obligations <- desConnector.getObligations(vrn)
-      financialData <- desConnector.getFinancialData(vrn)
+      financialData <- financialDataService.getFinancialData(vrn)
     } yield {
-      val eligibilityResponse = Json.toJson(EligibilityResponse(paymentPlanExists, obligations.obligations.size > 0, financialData.financialTransactions.head.outstandingAmount > 0)).toString()
+      val eligibilityResponse = Json.toJson(EligibilityResponse(paymentPlanExists, obligations.obligations.size > 0, financialData._1 > 0)).toString()
       Ok(eligibilityResponse)
     }
   }
