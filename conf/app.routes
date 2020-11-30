@@ -1,3 +1,6 @@
 # microservice specific routes
 
+GET        /eligibility/:vrn           uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.EligibilityController.get(vrn: String)
+GET        /financialData/:vrn         uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.FinancialDataController.get(vrn: String)
+
 GET        /hello-world             uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.MicroserviceHelloWorldController.hello
