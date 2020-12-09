@@ -10,7 +10,7 @@ import play.api.libs.json.Json
 case class ObligationDetails (status: String,
                               inboundCorrespondenceFromDate: String,
                               inboundCorrespondenceToDate: String,
-                              inboundCorrespondenceDateReceived: String,
+                              inboundCorrespondenceDateReceived: Option[String],
                               inboundCorrespondenceDueDate: String,
                               periodKey: String)
 

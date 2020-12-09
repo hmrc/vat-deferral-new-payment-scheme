@@ -15,15 +15,22 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class DesConnector @Inject() (http: HttpClient, servicesConfig: ServicesConfig) {
 
+  private def getConfig(key: String) = servicesConfig.getConfString(key, "")
+
   lazy val serviceURL = servicesConfig.baseUrl("des-service")
+  lazy val environment: String = getConfig("des-service.environment")
+  lazy val authorizationToken: String = s"Bearer ${getConfig("des-service.authorization-token")}"
+
+  val headers = Seq("Authorization" -> authorizationToken, "Environment" -> environment)
+  val headerCarrier = HeaderCarrier(extraHeaders = headers)
 
   def getObligations(vrn: String)(implicit hc: HeaderCarrier) = {
     val url: String = s"${serviceURL}/des/enterprise/obligation-data/vrn/$vrn/VATC?from=2016-04-06&to=2020-04-06&status=O"
-    http.GET[ObligationData](url)
+    http.GET[ObligationData](url)(implicitly, headerCarrier, implicitly)
   }
 
   def getFinancialData(vrn: String)(implicit hc: HeaderCarrier) = {
-    val url: String = s"${serviceURL}/des/enterprise/financial-data/VRN/$vrn/VATC?dateFrom=2020-03-20&dateTo=2020-06-30&onlyOpenItems=true&includeLocks=true&calculateAccruedInterest=true&customerPaymentInformation=true"
-    http.GET[FinancialData](url)
+    val url: String = s"${serviceURL}/des/enterprise/financial-data/VRN/$vrn/VATC?dateFrom=2020-03-20&dateTo=2020-06-30"
+    http.GET[FinancialData](url)(implicitly, headerCarrier, implicitly)
   }
 }

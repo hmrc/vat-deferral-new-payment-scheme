@@ -11,4 +11,4 @@ object Obligations {
   implicit val format = Json.format[Obligations]
 }
 
-case class Obligations (identification: Identification, obligationDetails: List[ObligationDetails])
+case class Obligations (identification: Option[Identification], obligationDetails: List[ObligationDetails])
