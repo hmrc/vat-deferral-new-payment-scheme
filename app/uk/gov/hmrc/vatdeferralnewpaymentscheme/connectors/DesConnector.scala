@@ -25,12 +25,12 @@ class DesConnector @Inject() (http: HttpClient, servicesConfig: ServicesConfig) 
   val headerCarrier = HeaderCarrier(extraHeaders = headers)
 
   def getObligations(vrn: String)(implicit hc: HeaderCarrier) = {
-    val url: String = s"${serviceURL}/des/enterprise/obligation-data/vrn/$vrn/VATC?from=2016-04-06&to=2020-04-06&status=O"
+    val url: String = s"${serviceURL}/enterprise/obligation-data/vrn/$vrn/VATC?from=2016-04-06&to=2020-04-06&status=O"
     http.GET[ObligationData](url)(implicitly, headerCarrier, implicitly)
   }
 
   def getFinancialData(vrn: String)(implicit hc: HeaderCarrier) = {
-    val url: String = s"${serviceURL}/des/enterprise/financial-data/VRN/$vrn/VATC?dateFrom=2020-03-20&dateTo=2020-06-30"
+    val url: String = s"${serviceURL}/enterprise/financial-data/VRN/$vrn/VATC?dateFrom=2020-03-20&dateTo=2020-06-30"
     http.GET[FinancialData](url)(implicitly, headerCarrier, implicitly)
   }
 }
