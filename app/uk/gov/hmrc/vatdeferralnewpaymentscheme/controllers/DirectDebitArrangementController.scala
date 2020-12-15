@@ -86,8 +86,19 @@ class DirectDebitArrangementController @Inject()(appConfig: AppConfig, cc: Contr
           ""
         )
 
-        // val letterAndControl = LetterAndControl() // TODO: Get address from VAT chcker api
-        val arrangement = TimeToPayArrangementRequest(ttpArrangement, None)
+        // TODO: Get address from VAT chcker api
+        val letterAndControl = LetterAndControl(
+          customerName = Some("#####"),
+          salutation = Some("Dear Sir or Madam"),
+          addressLine1 = Some("a"),
+          addressLine2 = Some("a"),
+          addressLine3 = Some("a"),
+          addressLine4 = Some("a"),
+          addressLine5 = Some("a"),
+          postCode = Some(""),
+          totalAll = Some(totalAmountToPay.toString))
+
+        val arrangement = TimeToPayArrangementRequest(ttpArrangement, Some(letterAndControl))
 
         desDirectDebitConnector.createPaymentPlan(paymentPlanRequest, vrn).map(
           _ => {
