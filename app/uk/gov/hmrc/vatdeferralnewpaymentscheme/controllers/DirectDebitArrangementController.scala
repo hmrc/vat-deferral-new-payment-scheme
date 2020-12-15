@@ -44,14 +44,12 @@ class DirectDebitArrangementController @Inject()(appConfig: AppConfig, cc: Contr
           vrn, // TODO: Verify payment reference
           "VNPS",
           "GBP",
-          Some(firstPaymentAmount.toString),
-          Some(startDate),
+          firstPaymentAmount.toString,
+          startDate,
           scheduledPaymentAmount.toString,
           startDate.plusMonths(1),
-          endDate.minusMonths(1),
-          "Calendar Monthly",
-          scheduledPaymentAmount.toString,
           endDate,
+          "Calendar Monthly",
           totalAmountToPay.toString)
 
         val paymentPlanRequest = PaymentPlanRequest(

@@ -13,14 +13,12 @@ case class PaymentPlan(
                         paymentReference:          String,
                         hodService:                String,
                         paymentCurrency:           String,
-                        initialPaymentAmount:      Option[String],
-                        initialPaymentStartDate:   Option[LocalDate],
+                        initialPaymentAmount:      String,
+                        initialPaymentStartDate:   LocalDate,
                         scheduledPaymentAmount:    String,
                         scheduledPaymentStartDate: LocalDate,
                         scheduledPaymentEndDate:   LocalDate,
                         scheduledPaymentFrequency: String,
-                        balancingPaymentAmount:    String,
-                        balancingPaymentDate:      LocalDate,
                         totalLiability:            String)
 
 object PaymentPlan {

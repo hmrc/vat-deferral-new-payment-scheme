@@ -13,14 +13,12 @@ case class PaymentPlanDecimal(
                                paymentReference:          String,
                                hodService:                String,
                                paymentCurrency:           String,
-                               initialPaymentAmount:      Option[BigDecimal],
-                               initialPaymentStartDate:   Option[LocalDate],
+                               initialPaymentAmount:      BigDecimal,
+                               initialPaymentStartDate:   LocalDate,
                                scheduledPaymentAmount:    BigDecimal,
                                scheduledPaymentStartDate: LocalDate,
                                scheduledPaymentEndDate:   LocalDate,
                                scheduledPaymentFrequency: String,
-                               balancingPaymentAmount:    BigDecimal,
-                               balancingPaymentDate:      LocalDate,
                                totalLiability:            BigDecimal) {
 
   def toPaymentPlan: PaymentPlan = {
@@ -29,14 +27,12 @@ case class PaymentPlanDecimal(
       paymentReference,
       hodService,
       paymentCurrency,
-      initialPaymentAmount.fold[Option[String]](None)(amount => Some(amount.toString)),
+      initialPaymentAmount.toString,
       initialPaymentStartDate,
       scheduledPaymentAmount.toString,
       scheduledPaymentStartDate,
       scheduledPaymentEndDate,
       scheduledPaymentFrequency,
-      balancingPaymentAmount.toString,
-      balancingPaymentDate,
       totalLiability.toString)
   }
 }
