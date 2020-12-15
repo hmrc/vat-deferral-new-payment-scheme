@@ -15,6 +15,7 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesDirectDebitConnect
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.DirectDebitArrangementRequest
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement.{DebitDetails, LetterAndControl, TimeToPayArrangementRequest, TtpArrangement}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit._
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -26,7 +27,8 @@ class DirectDebitArrangementController @Inject()(
   cc: ControllerComponents,
   desDirectDebitConnector: DesDirectDebitConnector,
   desTimeToPayArrangementConnector: DesTimeToPayArrangementConnector,
-  vatRegisteredCompaniesConnector: VatRegisteredCompaniesConnector)
+  vatRegisteredCompaniesConnector: VatRegisteredCompaniesConnector,
+  paymentPlanStore: PaymentPlanStore)
   extends BackendController(cc) {
 
   def post(vrn: String) = Action.async(parse.json) { implicit request =>
@@ -106,7 +108,10 @@ class DirectDebitArrangementController @Inject()(
 
             desDirectDebitConnector.createPaymentPlan(paymentPlanRequest, vrn).map(
               _ => desTimeToPayArrangementConnector.createArrangement(vrn, arrangement).flatMap {
-                _ => Future.successful(Created(""))
+                _ => {
+                  paymentPlanStore.add(vrn)
+                  Future.successful(Created(""))
+                }
               }
             )
 

@@ -21,6 +21,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[MongoPaymentPlanStore])
 trait PaymentPlanStore {
   def exists(vrn: String)(implicit hc: HeaderCarrier): Future[Boolean]
+  def add(vrn: String)
 }
 
 @Singleton
@@ -34,12 +35,16 @@ class MongoPaymentPlanStore @Inject() (mongo: ReactiveMongoComponent)(implicit e
 
   def exists(vrn: String)(implicit hc: HeaderCarrier): Future[Boolean] = {
     find("vrn" -> vrn).map { res ⇒
-      res.headOption.fold[Boolean](false)(data ⇒ true)
+      res.headOption.fold[Boolean](false)(_ ⇒ true)
     }.recover {
-      case e ⇒ {
+      case _ ⇒ {
         false
       }
     }
+  }
+
+  def add(vrn: String): Unit ={
+    insert(PaymentPlan(vrn))
   }
 }
 
