@@ -32,7 +32,7 @@ class DirectDebitArrangementController @Inject()(appConfig: AppConfig, cc: Contr
         val numberOfPayments = ddar.numberOfPayments
 
         val scheduledPaymentAmount = (totalAmountToPay / numberOfPayments).setScale(2, RoundingMode.DOWN)
-        val balancingPaymentAmount = scheduledPaymentAmount + (totalAmountToPay - (scheduledPaymentAmount * numberOfPayments))
+        val firstPaymentAmount = scheduledPaymentAmount + (totalAmountToPay - (scheduledPaymentAmount * numberOfPayments))
 
         // TODO: Get the rules from the business
         val startDate = LocalDate.now.withDayOfMonth(ddar.paymentDay)
@@ -44,13 +44,13 @@ class DirectDebitArrangementController @Inject()(appConfig: AppConfig, cc: Contr
           vrn, // TODO: Verify payment reference
           "VNPS",
           "GBP",
-          None,
-          None,
+          Some(firstPaymentAmount.toString),
+          Some(startDate),
           scheduledPaymentAmount.toString,
-          startDate,
-          endDate,
+          startDate.plusMonths(1),
+          endDate.minusMonths(1),
           "Calendar Monthly",
-          balancingPaymentAmount.toString,
+          scheduledPaymentAmount.toString,
           endDate,
           totalAmountToPay.toString)
 
@@ -72,18 +72,18 @@ class DirectDebitArrangementController @Inject()(appConfig: AppConfig, cc: Contr
         }
 
         val ttpArrangement = TtpArrangement(
-          startDate.toString,
+          LocalDate.now.toString,
           endDate.toString,
           startDate.toString,
-          balancingPaymentAmount.toString, // TODO: Hack in the robotics to make initial payment the final payment
-          scheduledPaymentAmount.toString, // TODO: Final monthly amount
+          firstPaymentAmount.toString,
+          scheduledPaymentAmount.toString,
           "Monthly",
           reviewDate.toString,
-          "ZZZ", // TODO: What should the initials be
-          "Other", // TODO: What should the enforcement type be
+          "ZZZ",
+          "Other",
           true,
-          dd.toList, // TODO: What are the debit details
-          "" // TODO: What notes should be pass
+          dd.toList,
+          ""
         )
 
         // val letterAndControl = LetterAndControl() // TODO: Get address from VAT chcker api
