@@ -9,8 +9,6 @@ import javax.inject.Inject
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement.TimeToPayArrangementRequest
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.financialdata.FinancialData
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.obligations.ObligationData
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

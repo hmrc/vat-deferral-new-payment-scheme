@@ -17,7 +17,7 @@ case class TtpArrangement(
    enforcementAction: String,
    directDebit: Boolean,
    debitDetails: List[DebitDetails],
-   note: String
+   note: String = ""
  )
 
 object TtpArrangement {

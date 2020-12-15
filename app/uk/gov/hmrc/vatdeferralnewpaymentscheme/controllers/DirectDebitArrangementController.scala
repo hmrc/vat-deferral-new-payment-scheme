@@ -11,17 +11,22 @@ import javax.inject.{Inject, Singleton}
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesDirectDebitConnector, DesTimeToPayArrangementConnector}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesDirectDebitConnector, DesTimeToPayArrangementConnector, VatRegisteredCompaniesConnector}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.DirectDebitArrangementRequest
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement.{DebitDetails, LetterAndControl, TimeToPayArrangementRequest, TtpArrangement}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.math.BigDecimal.RoundingMode
 import scala.concurrent.Future
+import scala.math.BigDecimal.RoundingMode
 
 @Singleton()
-class DirectDebitArrangementController @Inject()(appConfig: AppConfig, cc: ControllerComponents, desDirectDebitConnector: DesDirectDebitConnector, desTimeToPayArrangementConnector: DesTimeToPayArrangementConnector)
+class DirectDebitArrangementController @Inject()(
+  appConfig: AppConfig,
+  cc: ControllerComponents,
+  desDirectDebitConnector: DesDirectDebitConnector,
+  desTimeToPayArrangementConnector: DesTimeToPayArrangementConnector,
+  vatRegisteredCompaniesConnector: VatRegisteredCompaniesConnector)
   extends BackendController(cc) {
 
   def post(vrn: String) = Action.async(parse.json) { implicit request =>
@@ -80,30 +85,32 @@ class DirectDebitArrangementController @Inject()(appConfig: AppConfig, cc: Contr
           "ZZZ",
           "Other",
           true,
-          dd.toList,
-          ""
-        )
+          dd.toList)
 
-        // TODO: Get address from VAT chcker api
-        val letterAndControl = LetterAndControl(
-          customerName = Some("#####"),
-          salutation = Some("Dear Sir or Madam"),
-          addressLine1 = Some("a"),
-          addressLine2 = Some("a"),
-          addressLine3 = Some("a"),
-          addressLine4 = Some("a"),
-          addressLine5 = Some("a"),
-          postCode = Some(""),
-          totalAll = Some(totalAmountToPay.toString))
+        vatRegisteredCompaniesConnector.lookup(vrn)
+          .map(a => a.getOrElse(throw new RuntimeException("Response does not exist")))
+          .map(b => b.target.getOrElse(throw new RuntimeException("Target does not exist")))
+          .map(c => {
+            val letterAndControl = LetterAndControl(
+              customerName = Some(c.name),
+              addressLine1 = Some(c.address.line1),
+              addressLine2 = c.address.line2,
+              addressLine3 = c.address.line3,
+              addressLine4 = c.address.line4,
+              addressLine5 = c.address.line5,
+              postCode = c.address.postcode,
+              salutation = Some("Dear Sir or Madam"),
+              totalAll = Some(totalAmountToPay.toString))
 
-        val arrangement = TimeToPayArrangementRequest(ttpArrangement, Some(letterAndControl))
+            val arrangement = TimeToPayArrangementRequest(ttpArrangement, Some(letterAndControl))
 
-        desDirectDebitConnector.createPaymentPlan(paymentPlanRequest, vrn).map(
-          _ => {
-            desTimeToPayArrangementConnector.createArrangement(vrn, arrangement)
-              .flatMap{_ => Future.successful(Ok("hello"))}
-          }
-        ).flatMap(b => b)
+            desDirectDebitConnector.createPaymentPlan(paymentPlanRequest, vrn).map(
+              _ => desTimeToPayArrangementConnector.createArrangement(vrn, arrangement).flatMap {
+                _ => Future.successful(Created(""))
+              }
+            )
+
+          }).flatMap(b => b.flatMap(c => c))
       }
     }
   }
