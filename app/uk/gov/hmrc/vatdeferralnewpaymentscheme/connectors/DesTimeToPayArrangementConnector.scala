@@ -24,7 +24,7 @@ class DesTimeToPayArrangementConnector @Inject()(http: HttpClient, servicesConfi
   val headerCarrier = HeaderCarrier(extraHeaders = headers)
 
   def createArrangement(vrn: String, timeToPayArrangementRequest: TimeToPayArrangementRequest)(implicit hc: HeaderCarrier) = {
-    val url: String = s"${serviceURL}/time-to-pay/2.0.0/vrn/$vrn/arrangements"
+    val url: String = s"${serviceURL}/time-to-pay/02.00.00/vrn/$vrn/arrangements"
     http.POST[TimeToPayArrangementRequest, HttpResponse](url, timeToPayArrangementRequest)(implicitly, implicitly, headerCarrier, implicitly)
   }
 }
