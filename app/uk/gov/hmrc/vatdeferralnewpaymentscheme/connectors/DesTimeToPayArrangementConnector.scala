@@ -21,10 +21,10 @@ class DesTimeToPayArrangementConnector @Inject()(http: HttpClient, servicesConfi
   lazy val authorizationToken: String = s"Bearer ${getConfig("des-arrangement-service.authorization-token")}"
 
   val headers = Seq("Authorization" -> authorizationToken, "Environment" -> environment)
-  val headerCarrier = HeaderCarrier(extraHeaders = headers)
+  implicit val headerCarrier = HeaderCarrier(extraHeaders = headers)
 
-  def createArrangement(vrn: String, timeToPayArrangementRequest: TimeToPayArrangementRequest)(implicit hc: HeaderCarrier) = {
+  def createArrangement(vrn: String, timeToPayArrangementRequest: TimeToPayArrangementRequest)= {
     val url: String = s"${serviceURL}/time-to-pay/02.00.00/vrn/$vrn/arrangements"
-    http.POST[TimeToPayArrangementRequest, HttpResponse](url, timeToPayArrangementRequest)(implicitly, implicitly, headerCarrier, implicitly)
+    http.POST[TimeToPayArrangementRequest, HttpResponse](url, timeToPayArrangementRequest)
   }
 }

@@ -22,13 +22,10 @@ class DesDirectDebitConnector @Inject()(http: HttpClient, servicesConfig: Servic
   lazy val authorizationToken: String = s"Bearer ${getConfig("des-directdebit-service.authorization-token")}"
 
   val headers = Seq("Authorization" -> authorizationToken, "Environment" -> environment)
-  val headerCarrier = HeaderCarrier(extraHeaders = headers)
+  implicit val headerCarrier = HeaderCarrier(extraHeaders = headers)
 
   def createPaymentPlan(request: PaymentPlanRequest, credentialId: String) = {
-    implicit val hc: HeaderCarrier = headerCarrier
-
     val createPaymentPlanURL: String = s"$serviceURL/direct-debits/customers/$credentialId/instructions/payment-plans"
-    Logger.logger.debug("inside desDirectDebitApiConnector.createPaymentPlan paymentPlan request : " + request.toString)
     http.POST[PaymentPlanRequest, PaymentPlanReference](createPaymentPlanURL, request)
   }
 }

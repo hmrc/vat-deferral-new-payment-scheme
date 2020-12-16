@@ -5,7 +5,8 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.vatregisteredcompanies
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.functional.syntax._
+import play.api.libs.json.{Reads, __}
 
 case class VatRegisteredCompany(
   name: String,
@@ -14,6 +15,9 @@ case class VatRegisteredCompany(
 )
 
 object VatRegisteredCompany {
-  implicit val vatRegisteredCompanyFormat: OFormat[VatRegisteredCompany] =
-    Json.format[VatRegisteredCompany]
+  implicit val reads: Reads[VatRegisteredCompany] = (
+        (__ \ "target" \ "name").read[String] and
+        (__ \ "target" \ "vatNumber").read[String] and
+        (__ \ "target" \ "address").read[Address]
+    )(VatRegisteredCompany.apply _)
 }

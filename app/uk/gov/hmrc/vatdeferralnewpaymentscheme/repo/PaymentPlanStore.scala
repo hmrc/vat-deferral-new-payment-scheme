@@ -9,11 +9,10 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.repo
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.bson.{BSONDocument, BSONObjectID, document}
+import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.MongoPaymentPlanStore.PaymentPlan
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -34,13 +33,7 @@ class MongoPaymentPlanStore @Inject() (mongo: ReactiveMongoComponent)(implicit e
   with PaymentPlanStore {
 
   def exists(vrn: String)(implicit hc: HeaderCarrier): Future[Boolean] = {
-    find("vrn" -> vrn).map { res ⇒
-      res.headOption.fold[Boolean](false)(_ ⇒ true)
-    }.recover {
-      case _ ⇒ {
-        false
-      }
-    }
+    find("vrn" -> vrn).map(_.nonEmpty).recover{ case _ ⇒ false }
   }
 
   def add(vrn: String): Unit ={

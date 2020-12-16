@@ -13,10 +13,7 @@ case class PaymentPlanRequest(
                                knownFact:              Seq[KnownFact],
                                directDebitInstruction: DirectDebitInstructionRequest,
                                paymentPlan:            PaymentPlan,
-                               printFlag:              Boolean) {
-
-  def copyWithDdiRef(ddiRefrence: String): PaymentPlanRequest = copy(directDebitInstruction = directDebitInstruction.copyWithDdiRef(ddiRefrence))
-}
+                               printFlag:              Boolean)
 
 object PaymentPlanRequest {
   implicit val format = Json.format[PaymentPlanRequest]

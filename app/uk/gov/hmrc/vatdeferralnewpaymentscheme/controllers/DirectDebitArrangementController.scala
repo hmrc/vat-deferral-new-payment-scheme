@@ -18,7 +18,6 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.math.BigDecimal.RoundingMode
 
 @Singleton()
@@ -41,14 +40,13 @@ class DirectDebitArrangementController @Inject()(
         val scheduledPaymentAmount = (totalAmountToPay / numberOfPayments).setScale(2, RoundingMode.DOWN)
         val firstPaymentAmount = scheduledPaymentAmount + (totalAmountToPay - (scheduledPaymentAmount * numberOfPayments))
 
-        // TODO: Get the rules from the business
         val startDate = LocalDate.now.withDayOfMonth(ddar.paymentDay)
         val endDate = startDate.plusMonths(numberOfPayments - 1)
 
-        val directDebitInstructionRequest = DirectDebitInstructionRequest(Some(ddar.sortCode), Some(ddar.accountNumber), Some(ddar.accountName), false, None)
+        val directDebitInstructionRequest = DirectDebitInstructionRequest(ddar.sortCode, ddar.accountNumber, ddar.accountName, false, "") //TODO: calculate ddiRef
         val paymentPlan = PaymentPlan(
           "Time to Pay",
-          vrn, // TODO: Verify payment reference
+          vrn,
           "VNPS",
           "GBP",
           firstPaymentAmount.toString,
@@ -89,33 +87,26 @@ class DirectDebitArrangementController @Inject()(
           true,
           dd.toList)
 
-        vatRegisteredCompaniesConnector.lookup(vrn)
-          .map(a => a.getOrElse(throw new RuntimeException("Response does not exist")))
-          .map(b => b.target.getOrElse(throw new RuntimeException("Target does not exist")))
-          .map(c => {
-            val letterAndControl = LetterAndControl(
-              customerName = Some(c.name),
-              addressLine1 = Some(c.address.line1),
-              addressLine2 = c.address.line2,
-              addressLine3 = c.address.line3,
-              addressLine4 = c.address.line4,
-              addressLine5 = c.address.line5,
-              postCode = c.address.postcode,
-              salutation = Some("Dear Sir or Madam"),
-              totalAll = Some(totalAmountToPay.toString))
+        for {
+          c <- vatRegisteredCompaniesConnector.lookup(vrn)
+          letterAndControl = LetterAndControl(
+            "Dear Sir or Madam", // TODO: Welsh translation
+            c.name,
+            c.address.line1,
+            c.address.line2,
+            c.address.line3,
+            c.address.line4,
+            c.address.line5,
+            c.address.postcode,
+            totalAmountToPay.toString)
 
-            val arrangement = TimeToPayArrangementRequest(ttpArrangement, Some(letterAndControl))
-
-            desDirectDebitConnector.createPaymentPlan(paymentPlanRequest, vrn).map(
-              _ => desTimeToPayArrangementConnector.createArrangement(vrn, arrangement).flatMap {
-                _ => {
-                  paymentPlanStore.add(vrn)
-                  Future.successful(Created(""))
-                }
-              }
-            )
-
-          }).flatMap(b => b.flatMap(c => c))
+          arrangement = TimeToPayArrangementRequest(ttpArrangement, Some(letterAndControl))
+          _ <- desDirectDebitConnector.createPaymentPlan(paymentPlanRequest, vrn)
+          _ <- desTimeToPayArrangementConnector.createArrangement(vrn, arrangement)
+        } yield {
+          paymentPlanStore.add(vrn)
+          Created("")
+        }
       }
     }
   }

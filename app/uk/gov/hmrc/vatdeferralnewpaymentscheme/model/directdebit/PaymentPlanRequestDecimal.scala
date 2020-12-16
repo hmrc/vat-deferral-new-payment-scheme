@@ -13,18 +13,7 @@ case class PaymentPlanRequestDecimal(
                                       knownFact:              Seq[KnownFact],
                                       directDebitInstruction: DirectDebitInstructionRequest,
                                       paymentPlan:            PaymentPlanDecimal,
-                                      printFlag:              Boolean) {
-
-  def toPaymentPlanRequest: PaymentPlanRequest = {
-    PaymentPlanRequest(
-      requestingService,
-      submissionDateTime,
-      knownFact,
-      directDebitInstruction,
-      paymentPlan.toPaymentPlan,
-      printFlag)
-  }
-}
+                                      printFlag:              Boolean)
 
 object PaymentPlanRequestDecimal {
   implicit val format = Json.format[PaymentPlanRequestDecimal]

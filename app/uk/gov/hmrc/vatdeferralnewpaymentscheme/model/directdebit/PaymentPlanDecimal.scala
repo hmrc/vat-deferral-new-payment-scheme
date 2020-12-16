@@ -19,23 +19,7 @@ case class PaymentPlanDecimal(
                                scheduledPaymentStartDate: LocalDate,
                                scheduledPaymentEndDate:   LocalDate,
                                scheduledPaymentFrequency: String,
-                               totalLiability:            BigDecimal) {
-
-  def toPaymentPlan: PaymentPlan = {
-    PaymentPlan(
-      ppType,
-      paymentReference,
-      hodService,
-      paymentCurrency,
-      initialPaymentAmount.toString,
-      initialPaymentStartDate,
-      scheduledPaymentAmount.toString,
-      scheduledPaymentStartDate,
-      scheduledPaymentEndDate,
-      scheduledPaymentFrequency,
-      totalLiability.toString)
-  }
-}
+                               totalLiability:            BigDecimal)
 
 object PaymentPlanDecimal {
   implicit val format = Json.format[PaymentPlanDecimal]
