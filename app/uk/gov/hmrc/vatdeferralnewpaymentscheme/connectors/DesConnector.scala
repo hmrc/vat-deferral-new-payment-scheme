@@ -22,15 +22,15 @@ class DesConnector @Inject() (http: HttpClient, servicesConfig: ServicesConfig) 
   lazy val authorizationToken: String = s"Bearer ${getConfig("des-service.authorization-token")}"
 
   val headers = Seq("Authorization" -> authorizationToken, "Environment" -> environment)
-  val headerCarrier = HeaderCarrier(extraHeaders = headers)
+  implicit val headerCarrier = HeaderCarrier(extraHeaders = headers)
 
-  def getObligations(vrn: String)(implicit hc: HeaderCarrier) = {
+  def getObligations(vrn: String) = {
     val url: String = s"${serviceURL}/enterprise/obligation-data/vrn/$vrn/VATC?from=2016-04-06&to=2020-04-06&status=O"
-    http.GET[ObligationData](url)(implicitly, headerCarrier, implicitly)
+    http.GET[ObligationData](url)
   }
 
-  def getFinancialData(vrn: String)(implicit hc: HeaderCarrier) = {
+  def getFinancialData(vrn: String)= {
     val url: String = s"${serviceURL}/enterprise/financial-data/VRN/$vrn/VATC?dateFrom=2020-03-20&dateTo=2020-06-30"
-    http.GET[FinancialData](url)(implicitly, headerCarrier, implicitly)
+    http.GET[FinancialData](url)
   }
 }

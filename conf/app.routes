@@ -3,4 +3,6 @@
 GET        /eligibility/:vrn           uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.EligibilityController.get(vrn: String)
 GET        /financialData/:vrn         uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.FinancialDataController.get(vrn: String)
 
+POST       /direct-debit-arrangement/:vrn          uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.DirectDebitArrangementController.post(vrn: String)
+
 GET        /hello-world             uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.MicroserviceHelloWorldController.hello
