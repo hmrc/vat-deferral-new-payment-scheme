@@ -20,17 +20,16 @@ import java.util.Date
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.Logger
-import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.MongoMongoImportFile.FileDetails
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.FileDetails
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoImportFile])
-trait FileImportRepo {
+trait ImportFileRepo {
   def lastModifiedDate(filename: String): Future[Option[Date]]
   def updateLastModifiedDate(filename: String, lastModifiedDate: Date)
 }
@@ -40,11 +39,9 @@ class MongoImportFile @Inject() (mongo: ReactiveMongoComponent)(implicit ec: Exe
   extends ReactiveRepository[FileDetails, BSONObjectID] (
     collectionName = "importFile",
     mongo          = mongo.mongoConnector.db,
-    FileDetails.fileDetailsFormat,
+    FileDetails.format,
     ReactiveMongoFormats.objectIdFormats)
-  with FileImportRepo {
-
-
+  with ImportFileRepo {
 
   def lastModifiedDate(filename: String): Future[Option[Date]] = {
     Logger.logger.debug("last mod date")
@@ -53,14 +50,5 @@ class MongoImportFile @Inject() (mongo: ReactiveMongoComponent)(implicit ec: Exe
 
   def updateLastModifiedDate(filename: String, lastModifiedDate: Date): Unit ={
     insert(FileDetails(filename, lastModifiedDate))
-  }
-}
-
-object MongoMongoImportFile {
-
-  private[repo] case class FileDetails(filename: String, lastModifiedDate: Date)
-
-  private[repo] object FileDetails {
-    implicit val fileDetailsFormat: Format[FileDetails] = Json.format[FileDetails]
   }
 }

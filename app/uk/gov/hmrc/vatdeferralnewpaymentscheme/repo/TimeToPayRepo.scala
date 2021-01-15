@@ -17,12 +17,11 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.repo
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.MongoTimeToPayRepo.TimeToPay
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.TimeToPay
 
 import scala.concurrent.ExecutionContext
 
@@ -35,7 +34,7 @@ trait TimeToPayRepo {
 @Singleton
 class MongoTimeToPayRepo @Inject() (mongo: ReactiveMongoComponent)(implicit ec: ExecutionContext)
   extends ReactiveRepository[TimeToPay, BSONObjectID] (
-    collectionName = "timeToPay",
+    collectionName = "fileImportTimeToPay",
     mongo          = mongo.mongoConnector.db,
     TimeToPay.format,
     ReactiveMongoFormats.objectIdFormats)
@@ -47,14 +46,5 @@ class MongoTimeToPayRepo @Inject() (mongo: ReactiveMongoComponent)(implicit ec: 
 
   def deleteAll(): Unit ={
     removeAll()
-  }
-}
-
-object MongoTimeToPayRepo {
-
-  private[repo] case class TimeToPay(vrn: String, filename: String)
-
-  private[repo] object TimeToPay {
-    implicit val format: Format[TimeToPay] = Json.format[TimeToPay]
   }
 }

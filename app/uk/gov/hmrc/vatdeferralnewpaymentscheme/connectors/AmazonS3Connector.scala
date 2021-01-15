@@ -21,8 +21,7 @@ import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.util.IOUtils
 import com.google.inject.Inject
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.s3.FileDetails
-
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.FileDetails
 import scala.collection.JavaConverters._
 
 class AmazonS3Connector @Inject()(config: AppConfig) {

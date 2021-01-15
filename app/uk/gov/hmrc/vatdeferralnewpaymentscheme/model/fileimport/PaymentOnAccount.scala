@@ -14,8 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.s3
+package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport
 
-import java.util.Date
+import play.api.libs.json.Json
 
-case class FileDetails(name: String, lastModifiedDate: Date)
+case class PaymentOnAccount(vrn: String, filename: String)
+
+object PaymentOnAccount {
+  implicit val format = Json.format[PaymentOnAccount]
+}

@@ -23,12 +23,12 @@ import com.google.inject.AbstractModule
 import javax.inject.{Inject, Singleton}
 import play.api.{Configuration, Environment, Logger}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.AmazonS3Connector
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{FileImportRepo, PaymentOnAccountRepo, TimeToPayRepo}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{ImportFileRepo, PaymentOnAccountRepo, TimeToPayRepo}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-class FileImportScheduler @Inject() (actorSystem: ActorSystem, amazonS3Connector: AmazonS3Connector, timeToPayRepo: TimeToPayRepo, paymentOnAccountRepo: PaymentOnAccountRepo, fileImportRepo: FileImportRepo) {
+class FileImportScheduler @Inject() (actorSystem: ActorSystem, amazonS3Connector: AmazonS3Connector, timeToPayRepo: TimeToPayRepo, paymentOnAccountRepo: PaymentOnAccountRepo, fileImportRepo: ImportFileRepo) {
 
   val logger = Logger(getClass)
 
