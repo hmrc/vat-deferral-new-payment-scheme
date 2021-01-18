@@ -21,7 +21,6 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.MongoPaymentPlanStore.PaymentPlan
@@ -30,7 +29,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoPaymentPlanStore])
 trait PaymentPlanStore {
-  def exists(vrn: String)(implicit hc: HeaderCarrier): Future[Boolean]
+  def exists(vrn: String): Future[Boolean]
   def add(vrn: String)
 }
 
@@ -43,7 +42,7 @@ class MongoPaymentPlanStore @Inject() (mongo: ReactiveMongoComponent)(implicit e
     ReactiveMongoFormats.objectIdFormats)
   with PaymentPlanStore {
 
-  def exists(vrn: String)(implicit hc: HeaderCarrier): Future[Boolean] = {
+  def exists(vrn: String): Future[Boolean] = {
     find("vrn" -> vrn).map(_.nonEmpty).recover{ case _ ⇒ false }
   }
 

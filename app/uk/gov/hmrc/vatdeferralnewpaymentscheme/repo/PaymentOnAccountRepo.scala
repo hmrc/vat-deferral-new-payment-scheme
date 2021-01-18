@@ -23,12 +23,13 @@ import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.PaymentOnAccount
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoPaymentOnAccountRepo])
 trait PaymentOnAccountRepo {
   def addMany(vrn: Array[PaymentOnAccount])
   def deleteAll()
+  def exists(vrn: String): Future[Boolean]
 }
 
 @Singleton
@@ -46,5 +47,9 @@ class MongoPaymentOnAccountRepo @Inject() (mongo: ReactiveMongoComponent)(implic
 
   def deleteAll(): Unit ={
     removeAll()
+  }
+
+  def exists(vrn: String): Future[Boolean] = {
+    find("vrn" -> vrn).map(_.nonEmpty).recover{ case _ ⇒ false }
   }
 }
