@@ -19,7 +19,7 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport
 import java.util.Date
 import play.api.libs.json.Json
 
-case class FileDetails(filename: String, lastModifiedDate: Date)
+case class FileDetails(name: String, lastModifiedDate: Date)
 
 object FileDetails {
   implicit val format = Json.format[FileDetails]

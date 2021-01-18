@@ -27,7 +27,7 @@ import scala.concurrent.ExecutionContext
 
 @ImplementedBy(classOf[MongoPaymentOnAccountRepo])
 trait PaymentOnAccountRepo {
-  def addMany(vrn: Array[String], filename: String)
+  def addMany(vrn: Array[PaymentOnAccount])
   def deleteAll()
 }
 
@@ -40,8 +40,8 @@ class MongoPaymentOnAccountRepo @Inject() (mongo: ReactiveMongoComponent)(implic
     ReactiveMongoFormats.objectIdFormats)
   with PaymentOnAccountRepo {
 
-  def addMany(vrn: Array[String], filename: String): Unit = {
-    bulkInsert(vrn.map(x => PaymentOnAccount(x, filename)))
+  def addMany(vrn: Array[PaymentOnAccount]): Unit = {
+    bulkInsert(vrn.map(x => x))
   }
 
   def deleteAll(): Unit ={
