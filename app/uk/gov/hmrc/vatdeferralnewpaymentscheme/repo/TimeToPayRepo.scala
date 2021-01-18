@@ -12,12 +12,13 @@ import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.TimeToPay
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoTimeToPayRepo])
 trait TimeToPayRepo {
-  def addMany(vrn: Array[TimeToPay])
+  def addMany(timeToPay: Array[TimeToPay])
   def deleteAll()
+  def exists(vrn: String): Future[Boolean]
 }
 
 @Singleton
@@ -29,11 +30,15 @@ class MongoTimeToPayRepo @Inject() (mongo: ReactiveMongoComponent)(implicit ec: 
     ReactiveMongoFormats.objectIdFormats)
   with TimeToPayRepo {
 
-  def addMany(vrn: Array[TimeToPay]): Unit = {
-    bulkInsert(vrn.map(x => x))
+  def addMany(timeToPay: Array[TimeToPay]): Unit = {
+    bulkInsert(timeToPay)
   }
 
   def deleteAll(): Unit ={
     removeAll()
+  }
+
+  def exists(vrn: String): Future[Boolean] = {
+    find("vrn" -> vrn).map(_.nonEmpty).recover{ case _ ⇒ false }
   }
 }
