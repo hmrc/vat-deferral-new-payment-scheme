@@ -29,6 +29,7 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.math.BigDecimal.RoundingMode
 
 @Singleton()
@@ -85,7 +86,7 @@ class DirectDebitArrangementController @Inject()(
           }
         }
 
-        val ttpArrangement = TtpArrangement(
+        val ttpArrangement: TtpArrangement = TtpArrangement(
           LocalDate.now.toString,
           endDate.toString,
           startDate.toString,
@@ -99,7 +100,7 @@ class DirectDebitArrangementController @Inject()(
           dd.toList)
 
         // TODO fix: this fails silently e.g. if the VAT Number is unknown
-        for {
+        val foo = for {
           c <- vatRegisteredCompaniesConnector.lookup(vrn)
           letterAndControl = LetterAndControl(
             "Dear Sir or Madam", // TODO: Welsh translation
@@ -111,7 +112,8 @@ class DirectDebitArrangementController @Inject()(
             c.address.line5,
             c.address.postcode,
             totalAmountToPay.toString)
-
+          _ <- Future.successful(println(s"BBBBBB${vatRegisteredCompaniesConnector.lookup(vrn)}"))
+          _ <-  Future.successful(println(s"CCCCC$c"))
           arrangement = TimeToPayArrangementRequest(ttpArrangement, Some(letterAndControl))
           _ <- desDirectDebitConnector.createPaymentPlan(paymentPlanRequest, vrn)
           _ <- desTimeToPayArrangementConnector.createArrangement(vrn, arrangement)
@@ -119,6 +121,7 @@ class DirectDebitArrangementController @Inject()(
           paymentPlanStore.add(vrn)
           Created("")
         }
+        foo
       }
     }
   }

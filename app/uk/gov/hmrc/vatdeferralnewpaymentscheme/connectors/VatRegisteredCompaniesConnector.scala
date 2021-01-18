@@ -33,6 +33,11 @@ class VatRegisteredCompaniesConnector @Inject()(
   lazy val url: String = s"${servicesConfig.baseUrl("vat-registered-companies")}/vat-registered-companies"
 
   def lookup(vrn: String)(implicit hc: HeaderCarrier): Future[VatRegisteredCompany] = {
-    http.GET[VatRegisteredCompany](url = s"$url/lookup/$vrn")
+    http.GET[VatRegisteredCompany](url = s"$url/lookup/$vrn").map{
+      res => println("Noooooo");res
+    }.recover{
+      case e: uk.gov.hmrc.http.JsValidationException => throw new MissingCheckResponseException
+    }
   }
+  class MissingCheckResponseException extends RuntimeException("no CheckResponse from CheckEoriNumberConnector")
 }

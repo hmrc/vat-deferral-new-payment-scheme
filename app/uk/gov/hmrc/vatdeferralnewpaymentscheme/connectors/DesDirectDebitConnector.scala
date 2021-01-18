@@ -23,6 +23,7 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit.{PaymentPlanReference, PaymentPlanRequest}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class DesDirectDebitConnector @Inject()(http: HttpClient, servicesConfig: ServicesConfig) {
 
@@ -35,8 +36,13 @@ class DesDirectDebitConnector @Inject()(http: HttpClient, servicesConfig: Servic
   val headers = Seq("Authorization" -> authorizationToken, "Environment" -> environment)
   implicit val headerCarrier = HeaderCarrier(extraHeaders = headers)
 
-  def createPaymentPlan(request: PaymentPlanRequest, credentialId: String) = {
+  def createPaymentPlan(request: PaymentPlanRequest, credentialId: String): Future[PaymentPlanReference] = {
     val createPaymentPlanURL: String = s"$serviceURL/direct-debits/customers/$credentialId/instructions/payment-plans"
-    http.POST[PaymentPlanRequest, PaymentPlanReference](createPaymentPlanURL, request)
+    http.POST[PaymentPlanRequest, PaymentPlanReference](createPaymentPlanURL, request).map {
+      res => println("Noooooo");res
+    }.recover{
+      case e: uk.gov.hmrc.http.JsValidationException => throw new MissingCheckResponseException
+    }
   }
+  class MissingCheckResponseException extends RuntimeException("no CheckResponse from CheckEoriNumberConnector")
 }
