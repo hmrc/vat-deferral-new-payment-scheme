@@ -19,7 +19,6 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import uk.gov.hmrc.http.HttpClient
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.DesConnector
@@ -29,7 +28,7 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{FinancialDataService, Pa
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @Singleton()
-class EligibilityController @Inject()(http: HttpClient,
+class EligibilityController @Inject()(
       appConfig: AppConfig,
       cc: ControllerComponents,
       paymentPlanService: PaymentPlanService,
