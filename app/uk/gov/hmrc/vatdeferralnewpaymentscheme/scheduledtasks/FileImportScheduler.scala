@@ -54,5 +54,5 @@ class FileImportSchedulerModule(environment: Environment, val runModeConfigurati
   def enabled(): Boolean =
     runModeConfiguration
       .getOptional[Boolean]("microservice.services.schedulers.fileimport.enabled")
-      .getOrElse(true)
+      .getOrElse(false)
 }
