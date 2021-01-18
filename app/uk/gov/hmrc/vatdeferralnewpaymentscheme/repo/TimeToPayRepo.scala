@@ -16,7 +16,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoTimeToPayRepo])
 trait TimeToPayRepo {
-  def addMany(vrn: Array[TimeToPay])
+  def addMany(timeToPay: Array[TimeToPay])
   def deleteAll()
   def exists(vrn: String): Future[Boolean]
 }
@@ -30,8 +30,8 @@ class MongoTimeToPayRepo @Inject() (mongo: ReactiveMongoComponent)(implicit ec: 
     ReactiveMongoFormats.objectIdFormats)
   with TimeToPayRepo {
 
-  def addMany(vrn: Array[TimeToPay]): Unit = {
-    bulkInsert(vrn.map(x => x))
+  def addMany(timeToPay: Array[TimeToPay]): Unit = {
+    bulkInsert(timeToPay)
   }
 
   def deleteAll(): Unit ={

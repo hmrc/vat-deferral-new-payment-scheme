@@ -27,7 +27,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoPaymentOnAccountRepo])
 trait PaymentOnAccountRepo {
-  def addMany(vrn: Array[PaymentOnAccount])
+  def addMany(paymentOnAccount: Array[PaymentOnAccount])
   def deleteAll()
   def exists(vrn: String): Future[Boolean]
 }
@@ -41,8 +41,8 @@ class MongoPaymentOnAccountRepo @Inject() (mongo: ReactiveMongoComponent)(implic
     ReactiveMongoFormats.objectIdFormats)
   with PaymentOnAccountRepo {
 
-  def addMany(vrn: Array[PaymentOnAccount]): Unit = {
-    bulkInsert(vrn.map(x => x))
+  def addMany(paymentOnAccount: Array[PaymentOnAccount]): Unit = {
+    bulkInsert(paymentOnAccount)
   }
 
   def deleteAll(): Unit ={
