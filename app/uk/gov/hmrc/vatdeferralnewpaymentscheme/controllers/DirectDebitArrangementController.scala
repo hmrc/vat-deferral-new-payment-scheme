@@ -22,9 +22,9 @@ import javax.inject.{Inject, Singleton}
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesDirectDebitConnector, DesTimeToPayArrangementConnector, VatRegisteredCompaniesConnector}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesDirectDebitConnector, DesTimeToPayArrangementConnector}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.DirectDebitArrangementRequest
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement.{DebitDetails, LetterAndControl, TimeToPayArrangementRequest, TtpArrangement}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
 
@@ -37,7 +37,6 @@ class DirectDebitArrangementController @Inject()(
   cc: ControllerComponents,
   desDirectDebitConnector: DesDirectDebitConnector,
   desTimeToPayArrangementConnector: DesTimeToPayArrangementConnector,
-  vatRegisteredCompaniesConnector: VatRegisteredCompaniesConnector,
   paymentPlanStore: PaymentPlanStore)
   extends BackendController(cc) {
 
@@ -74,12 +73,12 @@ class DirectDebitArrangementController @Inject()(
           Seq(KnownFact("VRN", vrn)),
           directDebitInstructionRequest,
           paymentPlan,
-          false
+          printFlag = false
         )
 
         val reviewDate = endDate.plusWeeks(3)
 
-        val dd: Seq[DebitDetails] = (0 to numberOfPayments - 1).map {
+        val dd: Seq[DebitDetails] = (0 until numberOfPayments).map {
           month => {
             DebitDetails("IN2", startDate.plusMonths(month).toString)
           }
@@ -95,25 +94,12 @@ class DirectDebitArrangementController @Inject()(
           reviewDate.toString,
           "ZZZ",
           "Other",
-          true,
+          directDebit = true,
           dd.toList)
 
-        // TODO fix: this fails silently e.g. if the VAT Number is unknown
         for {
-          c <- vatRegisteredCompaniesConnector.lookup(vrn)
-          letterAndControl = LetterAndControl(
-            "Dear Sir or Madam", // TODO: Welsh translation
-            c.name,
-            c.address.line1,
-            c.address.line2,
-            c.address.line3,
-            c.address.line4,
-            c.address.line5,
-            c.address.postcode,
-            totalAmountToPay.toString)
-
-          arrangement = TimeToPayArrangementRequest(ttpArrangement, Some(letterAndControl))
           _ <- desDirectDebitConnector.createPaymentPlan(paymentPlanRequest, vrn)
+          arrangement = TimeToPayArrangementRequest(ttpArrangement)
           _ <- desTimeToPayArrangementConnector.createArrangement(vrn, arrangement)
         } yield {
           paymentPlanStore.add(vrn)
