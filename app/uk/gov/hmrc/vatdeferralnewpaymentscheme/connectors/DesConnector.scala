@@ -17,10 +17,10 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors
 
 import javax.inject.Inject
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, NotFoundException}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.financialdata.FinancialData
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.obligations.ObligationData
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.obligations.{ObligationData, Obligations}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -37,7 +37,9 @@ class DesConnector @Inject() (http: HttpClient, servicesConfig: ServicesConfig) 
 
   def getObligations(vrn: String) = {
     val url: String = s"${serviceURL}/enterprise/obligation-data/vrn/$vrn/VATC?from=2016-04-06&to=2020-04-06&status=O"
-    http.GET[ObligationData](url)
+    http.GET[ObligationData](url) recover {
+      case _: NotFoundException => ObligationData(List.empty[Obligations])
+    }
   }
 
   def getFinancialData(vrn: String)= {
