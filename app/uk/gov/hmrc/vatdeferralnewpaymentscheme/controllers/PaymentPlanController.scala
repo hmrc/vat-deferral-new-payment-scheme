@@ -9,10 +9,10 @@ import javax.inject.{Inject, Singleton}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.PaymentPlan
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.PaymentPlanService
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 @Singleton()
 class PaymentPlanController @Inject()(
@@ -22,11 +22,11 @@ class PaymentPlanController @Inject()(
     extends BackendController(cc) {
 
   def get(vrn: String): Action[AnyContent] = Action.async { implicit request =>
-    paymentPlanService.exists(vrn).flatMap { exists => {
+    paymentPlanService.exists(vrn).map { exists => {
       if (exists)
-        Future.successful(Ok(""))
+        Ok(PaymentPlan(vrn))
       else
-        Future.successful(NotFound(""))
+        NotFound("")
     }
     }
   }

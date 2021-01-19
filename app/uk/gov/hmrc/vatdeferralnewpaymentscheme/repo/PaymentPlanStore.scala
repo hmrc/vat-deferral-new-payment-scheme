@@ -18,12 +18,11 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.repo
 
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.MongoPaymentPlanStore.PaymentPlan
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.PaymentPlan
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -38,7 +37,7 @@ class MongoPaymentPlanStore @Inject() (mongo: ReactiveMongoComponent)(implicit e
   extends ReactiveRepository[PaymentPlan, BSONObjectID] (
     collectionName = "paymentPlan",
     mongo          = mongo.mongoConnector.db,
-    PaymentPlan.vrnFormat,
+    PaymentPlan.format,
     ReactiveMongoFormats.objectIdFormats)
   with PaymentPlanStore {
 
@@ -48,14 +47,5 @@ class MongoPaymentPlanStore @Inject() (mongo: ReactiveMongoComponent)(implicit e
 
   def add(vrn: String): Unit ={
     insert(PaymentPlan(vrn))
-  }
-}
-
-object MongoPaymentPlanStore {
-
-  private[repo] case class PaymentPlan(vrn: String)
-
-  private[repo] object PaymentPlan {
-    implicit val vrnFormat: Format[PaymentPlan] = Json.format[PaymentPlan]
   }
 }
