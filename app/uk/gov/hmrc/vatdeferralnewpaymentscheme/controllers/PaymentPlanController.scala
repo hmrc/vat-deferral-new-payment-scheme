@@ -6,6 +6,7 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
 import javax.inject.{Inject, Singleton}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
@@ -24,7 +25,7 @@ class PaymentPlanController @Inject()(
   def get(vrn: String): Action[AnyContent] = Action.async { implicit request =>
     paymentPlanService.exists(vrn).map { exists => {
       if (exists)
-        Ok(PaymentPlan(vrn))
+        Ok(Json.toJson(PaymentPlan(vrn)))
       else
         NotFound("")
     }
