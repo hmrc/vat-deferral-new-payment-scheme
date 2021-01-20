@@ -27,8 +27,9 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.DirectDebitArrangementReque
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.DirectDebitGenService
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.math.BigDecimal.RoundingMode
 
 @Singleton()
@@ -37,7 +38,9 @@ class DirectDebitArrangementController @Inject()(
   cc: ControllerComponents,
   desDirectDebitConnector: DesDirectDebitConnector,
   desTimeToPayArrangementConnector: DesTimeToPayArrangementConnector,
-  paymentPlanStore: PaymentPlanStore)
+  paymentPlanStore: PaymentPlanStore,
+  directDebitService: DirectDebitGenService
+)(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
   def post(vrn: String) = Action.async(parse.json) { implicit request =>
@@ -53,7 +56,16 @@ class DirectDebitArrangementController @Inject()(
         val startDate = LocalDate.now.withDayOfMonth(ddar.paymentDay)
         val endDate = startDate.plusMonths(numberOfPayments - 1)
 
-        val directDebitInstructionRequest = DirectDebitInstructionRequest(ddar.sortCode, ddar.accountNumber, ddar.accountName, false, "") //TODO: calculate ddiRef
+        val directDebitInstructionRequest = DirectDebitInstructionRequest(
+          ddar.sortCode,
+          ddar.accountNumber,
+          ddar.accountName,
+          paperAuddisFlag = false,
+          directDebitService
+            .createSeededDDIRef(vrn)
+            .fold(throw new RuntimeException("DDIRef cannot be generated"))(_.toString)
+        )
+
         val paymentPlan = PaymentPlan(
           "Time to Pay",
           vrn,
@@ -65,7 +77,8 @@ class DirectDebitArrangementController @Inject()(
           startDate.plusMonths(1),
           endDate,
           "Calendar Monthly",
-          totalAmountToPay.toString)
+          totalAmountToPay.toString
+        )
 
         val paymentPlanRequest = PaymentPlanRequest(
           "VDNPS",
@@ -75,6 +88,7 @@ class DirectDebitArrangementController @Inject()(
           paymentPlan,
           printFlag = false
         )
+
 
         val reviewDate = endDate.plusWeeks(3)
 
