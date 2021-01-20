@@ -31,9 +31,18 @@ class FinancialDataService @Inject()(desConnector: DesConnector, appConfig: AppC
     } yield {
 
       val chargeReferences = appConfig.includedChargeReferences
-      val originalAmount = financialData.financialTransactions.filter{ a => chargeReferences.contains(a.chargeReference)  }.map{a => a.originalAmount}.sum
-      val outstandingAmount = financialData.financialTransactions.filter{ a => chargeReferences.contains(a.chargeReference)  }.map{a => a.outstandingAmount}.sum
-      (originalAmount, outstandingAmount)
+
+      financialData.financialTransactions
+        .filter { ft =>
+          (ft.chargeReference, ft.originalAmount) match {
+            case (Some(chargeRef), Some(_)) => chargeReferences.contains(chargeRef)
+            case _ => false
+          }
+        }
+        .map { ft => (ft.originalAmount.getOrElse(BigDecimal(0)), ft.outstandingAmount.getOrElse(BigDecimal(0))) }
+        .reduceOption((x, y) => {
+          (x._1 + y._1, x._2 + y._2)
+        }).getOrElse((BigDecimal(0), BigDecimal(0)))
     }
   }
 }
