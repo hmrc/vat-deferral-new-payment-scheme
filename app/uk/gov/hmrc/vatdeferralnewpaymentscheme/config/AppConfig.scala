@@ -36,4 +36,6 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   lazy val getObligationsPath = config.get[String]("microservice.services.des-service.getObligationsPath")
   lazy val getFinancialDataPath = config.get[String]("microservice.services.des-service.getFinancialDataPath")
+
+  lazy val includedChargeReferences = config.getOptional[Seq[String]]("financialDataApiFilter.includedChargeReferences").getOrElse(Seq.empty[String])
 }
