@@ -14,18 +14,21 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit
+package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 
-import play.api.libs.json.Json
+import javax.inject.Inject
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
+import uk.gov.hmrc.smartstub._
 
-case class DirectDebitInstructionRequest(
-  sortCode:        String,
-  accountNumber:   String,
-  accountName:     String,
-  paperAuddisFlag: Boolean,
-  ddiRefNumber:    String
-)
+class DirectDebitGenService @Inject()(
+  appConfig: AppConfig
+) {
 
-object DirectDebitInstructionRequest {
-  implicit val format = Json.format[DirectDebitInstructionRequest]
+  def createSeededDDIRef(vrn: String): Option[Int] = {
+    val min = appConfig.ddiRefNoGenMinValue
+    val max = appConfig.ddiRefNoGenMaxValue
+    
+    DDIRefGen.genDDIRefNumber(min, max).seeded(vrn.hashCode.toLong)
+  }
+
 }

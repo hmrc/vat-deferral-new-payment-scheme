@@ -28,6 +28,9 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   val auditingEnabled: Boolean = config.get[Boolean]("auditing.enabled")
   val graphiteHost: String     = config.get[String]("microservice.metrics.graphite.host")
 
+  lazy val ddiRefNoGenMinValue: Int = config.get[Int]("ddiRefNoGenMinValue")
+  lazy val ddiRefNoGenMaxValue: Int = config.get[Int]("ddiRefNoGenMaxValue")
+
   lazy val folderName: String = config.get[String]("s3.folderName")
   lazy val awsAccessId: String = config.get[String]("s3.accessId")
   lazy val awsSecret: String = config.get[String]("s3.secret")

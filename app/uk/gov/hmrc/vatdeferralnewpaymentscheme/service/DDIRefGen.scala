@@ -14,18 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit
+package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 
-import play.api.libs.json.Json
+import org.scalacheck.Gen
 
-case class DirectDebitInstructionRequest(
-  sortCode:        String,
-  accountNumber:   String,
-  accountName:     String,
-  paperAuddisFlag: Boolean,
-  ddiRefNumber:    String
-)
+object DDIRefGen {
 
-object DirectDebitInstructionRequest {
-  implicit val format = Json.format[DirectDebitInstructionRequest]
+  def genDDIRefNumber(min: Int, max : Int): Gen[Int] = Gen.choose[Int](min, max)
+
 }
