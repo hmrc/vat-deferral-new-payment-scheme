@@ -36,4 +36,9 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   lazy val awsSecret: String = config.get[String]("s3.secret")
   lazy val bucket: String = config.get[String]("s3.bucket")
   lazy val region: String = config.get[String]("s3.region")
+
+  lazy val getObligationsPath = config.get[String]("microservice.services.des-service.getObligationsPath")
+  lazy val getFinancialDataPath = config.get[String]("microservice.services.des-service.getFinancialDataPath")
+
+  lazy val includedChargeReferences = config.getOptional[Seq[String]]("financialDataApiFilter.includedChargeReferences").getOrElse(Seq.empty[String])
 }

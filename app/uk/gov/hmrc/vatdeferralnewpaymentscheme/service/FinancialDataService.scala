@@ -17,21 +17,32 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 
 import javax.inject.Inject
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.DesConnector
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class FinancialDataService @Inject()(http: HttpClient, servicesConfig: ServicesConfig, desConnector: DesConnector) {
+class FinancialDataService @Inject()(desConnector: DesConnector, appConfig: AppConfig) {
 
   def getFinancialData(vrn: String)(implicit hc: HeaderCarrier) = {
     for {
       financialData <- desConnector.getFinancialData(vrn)
     } yield {
-      val originalAmount = financialData.financialTransactions.map{a => a.originalAmount}.sum
-      val outstandingAmount = financialData.financialTransactions.map{a => a.outstandingAmount}.sum
-      (originalAmount, outstandingAmount)
+
+      val chargeReferences = appConfig.includedChargeReferences
+
+      financialData.financialTransactions
+        .filter { ft =>
+          (ft.chargeReference, ft.originalAmount) match {
+            case (Some(chargeRef), Some(_)) => chargeReferences.contains(chargeRef)
+            case _ => false
+          }
+        }
+        .map { ft => (ft.originalAmount.getOrElse(BigDecimal(0)), ft.outstandingAmount.getOrElse(BigDecimal(0))) }
+        .reduceOption((x, y) => {
+          (x._1 + y._1, x._2 + y._2)
+        }).getOrElse((BigDecimal(0), BigDecimal(0)))
     }
   }
 }
