@@ -21,9 +21,12 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement.TimeToPayArrangementRequest
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
-class DesTimeToPayArrangementConnector @Inject()(http: HttpClient, servicesConfig: ServicesConfig) {
+class DesTimeToPayArrangementConnector @Inject()(
+  http: HttpClient,
+  servicesConfig: ServicesConfig
+)(implicit ec: ExecutionContext) {
 
   private def getConfig(key: String) = servicesConfig.getConfString(key, "")
 
@@ -32,7 +35,7 @@ class DesTimeToPayArrangementConnector @Inject()(http: HttpClient, servicesConfi
   lazy val authorizationToken: String = s"Bearer ${getConfig("des-arrangement-service.authorization-token")}"
 
   val headers = Seq("Authorization" -> authorizationToken, "Environment" -> environment)
-  implicit val headerCarrier = HeaderCarrier(extraHeaders = headers)
+  implicit val headerCarrier: HeaderCarrier = HeaderCarrier(extraHeaders = headers)
 
   def createArrangement(vrn: String, timeToPayArrangementRequest: TimeToPayArrangementRequest)= {
     val url: String = s"${serviceURL}/time-to-pay/02.00.00/vrn/$vrn/arrangements"

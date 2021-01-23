@@ -25,14 +25,15 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.financialdata.FinancialDataResponse
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.FinancialDataService
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 @Singleton()
-class FinancialDataController @Inject()(http: HttpClient,
-                                        appConfig: AppConfig,
-                                        cc: ControllerComponents,
-                                        financialDataService: FinancialDataService)
-    extends BackendController(cc) {
+class FinancialDataController @Inject()(
+  http: HttpClient,
+  appConfig: AppConfig,
+  cc: ControllerComponents,
+  financialDataService: FinancialDataService
+)(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def get(vrn: String): Action[AnyContent] = Action.async { implicit request =>
     for {

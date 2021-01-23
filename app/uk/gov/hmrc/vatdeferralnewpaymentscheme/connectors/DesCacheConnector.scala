@@ -20,12 +20,11 @@ import javax.inject.Inject
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, NotFoundException}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.financialdata.FinancialData
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.obligations.{ObligationData, Obligations}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class DesConnector @Inject() (
+class DesCacheConnector @Inject() (
   http: HttpClient,
   servicesConfig: ServicesConfig,
   appConfig: AppConfig
@@ -33,22 +32,18 @@ class DesConnector @Inject() (
 
   private def getConfig(key: String) = servicesConfig.getConfString(key, "")
 
-  lazy val serviceURL: String = servicesConfig.baseUrl("des-service")
-  lazy val environment: String = getConfig("des-service.environment")
-  lazy val authorizationToken: String = s"Bearer ${getConfig("des-service.authorization-token")}"
+  lazy val serviceURL: String = servicesConfig.baseUrl("des-cache-service")
 
-  val headers = Seq("Authorization" -> authorizationToken, "Environment" -> environment)
+  lazy val credentials: String = s"Basic ${getConfig("des-cache-service.credentials")}"
+  lazy val environment: String = getConfig("des-cache-service.environment")
+
+  val headers = Seq("Authorization" -> credentials, "Environment" -> environment)
   implicit val headerCarrier: HeaderCarrier = HeaderCarrier(extraHeaders = headers)
 
-  def getObligations(vrn: String): Future[ObligationData] = {
-    val url: String = s"$serviceURL/${appConfig.getObligationsPath.replace("$vrn", vrn)}"
+  def getVatCacheObligations(vrn: String): Future[ObligationData] = {
+    val url: String = s"$serviceURL/${appConfig.getVatCacheObligationsPath.replace("$vrn", vrn)}"
     http.GET[ObligationData](url) recover {
       case _: NotFoundException => ObligationData(List.empty[Obligations])
     }
-  }
-
-  def getFinancialData(vrn: String): Future[FinancialData] = {
-    val url: String = s"$serviceURL/${appConfig.getFinancialDataPath.replace("$vrn", vrn)}"
-    http.GET[FinancialData](url)
   }
 }
