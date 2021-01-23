@@ -22,9 +22,12 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit.{PaymentPlanReference, PaymentPlanRequest}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
-class DesDirectDebitConnector @Inject()(http: HttpClient, servicesConfig: ServicesConfig) {
+class DesDirectDebitConnector @Inject()(
+  http: HttpClient,
+  servicesConfig: ServicesConfig
+)(implicit ec: ExecutionContext) {
 
   private def getConfig(key: String) = servicesConfig.getConfString(key, "")
 

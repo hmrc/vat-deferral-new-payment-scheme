@@ -21,31 +21,46 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.DesConnector
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesCacheConnector, DesConnector}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.eligibility.EligibilityResponse
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{FinancialDataService, PaymentPlanService}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton()
 class EligibilityController @Inject()(
-      appConfig: AppConfig,
-      cc: ControllerComponents,
-      paymentPlanService: PaymentPlanService,
-      desConnector: DesConnector,
-      financialDataService: FinancialDataService)
-    extends BackendController(cc) {
+  appConfig: AppConfig,
+  cc: ControllerComponents,
+  paymentPlanService: PaymentPlanService,
+  desConnector: DesConnector,
+  desCacheConnector: DesCacheConnector,
+  financialDataService: FinancialDataService
+)(
+  implicit ec: ExecutionContext
+) extends BackendController(cc) {
 
   def get(vrn: String): Action[AnyContent] = Action.async { implicit request =>
 
     for {
       paymentPlanExists <- paymentPlanService.exists(vrn)
       obligations <- desConnector.getObligations(vrn)
+      obligationsCache <- obligations.obligations match {
+        case Nil => desCacheConnector.getVatCacheObligations(vrn)
+        case _ => Future.successful(obligations)
+      }
       financialData <- financialDataService.getFinancialData(vrn)
     } yield {
-      val eligibilityResponse = Json.toJson(EligibilityResponse(paymentPlanExists, obligations.obligations.size > 0, financialData._1 > 0)).toString()
+      val eligibilityResponse =
+        Json.toJson(
+          EligibilityResponse(
+            paymentPlanExists,
+            obligations.obligations.nonEmpty || obligationsCache.obligations.nonEmpty,
+            financialData._1 > 0
+          )
+        ).toString()
       Ok(eligibilityResponse)
     }
   }
+
 }
 

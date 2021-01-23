@@ -16,10 +16,14 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.obligations
 
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 
-case class Identification (incomeSourceType: String, referenceNumber: String, referenceType: String)
+case class Identification(
+  incomeSourceType: Option[String],
+  referenceNumber: String,
+  referenceType: String
+)
 
 object Identification {
-  implicit val format = Json.format[Identification]
+  implicit val format: OFormat[Identification] = Json.format[Identification]
 }

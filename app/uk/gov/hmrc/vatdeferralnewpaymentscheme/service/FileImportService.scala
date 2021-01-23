@@ -22,11 +22,16 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.AmazonS3Connector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.{PaymentOnAccount, TimeToPay}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{ImportFileRepo, PaymentOnAccountRepo, TimeToPayRepo}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
-class FileImportService @Inject()(amazonS3Connector: AmazonS3Connector, timeToPayRepo: TimeToPayRepo, paymentOnAccountRepo: PaymentOnAccountRepo, fileImportRepo: ImportFileRepo) {
+class FileImportService @Inject()(
+  amazonS3Connector: AmazonS3Connector,
+  timeToPayRepo: TimeToPayRepo,
+  paymentOnAccountRepo: PaymentOnAccountRepo,
+  fileImportRepo: ImportFileRepo
+)(implicit ec: ExecutionContext) {
 
-  def importS3File() = {
+  def importS3File(): Unit = {
     amazonS3Connector.listOfFiles().foreach(fileDetails => {
 
       fileImportRepo.lastModifiedDate(fileDetails.name).map {

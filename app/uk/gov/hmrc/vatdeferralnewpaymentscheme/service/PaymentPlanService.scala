@@ -19,10 +19,13 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 import com.google.inject.Inject
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, PaymentPlanStore, TimeToPayRepo}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class PaymentPlanService @Inject()(paymentPlanStore: PaymentPlanStore, paymentOnAccountRepo: PaymentOnAccountRepo, timeToPayRepo: TimeToPayRepo) {
+class PaymentPlanService @Inject()(
+  paymentPlanStore: PaymentPlanStore,
+  paymentOnAccountRepo: PaymentOnAccountRepo,
+  timeToPayRepo: TimeToPayRepo
+)(implicit ec: ExecutionContext) {
 
   def exists(vrn: String): Future[Boolean] = {
     paymentPlanStore.exists(vrn)
