@@ -19,6 +19,7 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 import java.time.LocalDate
 
 import javax.inject.{Inject, Singleton}
+import play.api.Logger
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
@@ -42,6 +43,8 @@ class DirectDebitArrangementController @Inject()(
   directDebitService: DirectDebitGenService
 )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
+
+  val logger = Logger(this.getClass)
 
   def post(vrn: String) = Action.async(parse.json) { implicit request =>
     withJsonBody[DirectDebitArrangementRequest] {
@@ -111,13 +114,20 @@ class DirectDebitArrangementController @Inject()(
           directDebit = true,
           dd.toList)
 
+        // TODO work out what the re
         for {
-          _ <- desDirectDebitConnector.createPaymentPlan(paymentPlanRequest, vrn)
+          a <- desDirectDebitConnector.createPaymentPlan(paymentPlanRequest, vrn)
           arrangement = TimeToPayArrangementRequest(ttpArrangement)
-          _ <- desTimeToPayArrangementConnector.createArrangement(vrn, arrangement)
+          b <- desTimeToPayArrangementConnector.createArrangement(vrn, arrangement)
         } yield {
-          paymentPlanStore.add(vrn)
-          Created("")
+          (a,b) match {
+            case (_:PaymentPlanReference, y) if y.status == 200 =>
+              paymentPlanStore.add(vrn)
+              Created("")
+            case e =>
+              logger.warn(s"bad payment plan or arrangement $e")
+              NotAcceptable("Unable to set up direct debit payment plan & arrangement")
+          }
         }
       }
     }
