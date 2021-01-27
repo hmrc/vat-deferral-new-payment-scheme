@@ -21,7 +21,8 @@ import play.api.libs.json.Json
 case class FinancialTransactions (
   chargeReference: Option[String],
   originalAmount: Option[BigDecimal],
-  outstandingAmount: Option[BigDecimal])
+  outstandingAmount: Option[BigDecimal]
+)
 
 object FinancialTransactions {
   implicit val format = Json.format[FinancialTransactions]
