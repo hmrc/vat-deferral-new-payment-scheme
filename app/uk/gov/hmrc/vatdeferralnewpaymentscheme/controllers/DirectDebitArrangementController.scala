@@ -114,7 +114,6 @@ class DirectDebitArrangementController @Inject()(
           directDebit = true,
           dd.toList)
 
-        // TODO work out what the re
         for {
           a <- desDirectDebitConnector.createPaymentPlan(paymentPlanRequest, vrn)
           arrangement = TimeToPayArrangementRequest(ttpArrangement)
@@ -124,8 +123,11 @@ class DirectDebitArrangementController @Inject()(
             case (_:PaymentPlanReference, y) if y.status == 200 =>
               paymentPlanStore.add(vrn)
               Created("")
+            case (_:PaymentPlanReference, e) =>
+              logger.warn(s"unable to set up time to pay arrangement ${e.body}")
+              NotAcceptable("Unable to set up direct debit payment plan & arrangement")
             case e =>
-              logger.warn(s"bad payment plan or arrangement $e")
+              logger.warn(s"unable to set up direct debit payment plan & arrangement $e")
               NotAcceptable("Unable to set up direct debit payment plan & arrangement")
           }
         }
