@@ -23,7 +23,8 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesCacheConnector, DesConnector}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.eligibility.EligibilityResponse
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{FinancialDataService, PaymentPlanService}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, PaymentPlanStore, TimeToPayRepo}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.FinancialDataService
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,10 +32,12 @@ import scala.concurrent.{ExecutionContext, Future}
 class EligibilityController @Inject()(
   appConfig: AppConfig,
   cc: ControllerComponents,
-  paymentPlanService: PaymentPlanService,
   desConnector: DesConnector,
   desCacheConnector: DesCacheConnector,
-  financialDataService: FinancialDataService
+  financialDataService: FinancialDataService,
+  paymentOnAccountRepo: PaymentOnAccountRepo,
+  timeToPayRepo: TimeToPayRepo,
+  paymentPlanStore: PaymentPlanStore
 )(
   implicit ec: ExecutionContext
 ) extends BackendController(cc) {
@@ -42,18 +45,22 @@ class EligibilityController @Inject()(
   def get(vrn: String): Action[AnyContent] = Action.async { implicit request =>
 
     for {
-      paymentPlanExists <- paymentPlanService.exists(vrn)
-      obligations <- desConnector.getObligations(vrn)
-      obligationsCache <- obligations.obligations match {
+      paymentPlanExists      <- paymentPlanStore.exists(vrn)
+      paymentOnAccountExists <- paymentOnAccountRepo.exists(vrn)
+      timeToPayExists        <- timeToPayRepo.exists(vrn)
+      obligations            <- desConnector.getObligations(vrn)
+      obligationsCache       <- obligations.obligations match {
         case Nil => desCacheConnector.getVatCacheObligations(vrn)
         case _ => Future.successful(obligations)
       }
-      financialData <- financialDataService.getFinancialData(vrn)
+      financialData          <- financialDataService.getFinancialData(vrn)
     } yield {
       val eligibilityResponse =
         Json.toJson(
           EligibilityResponse(
             paymentPlanExists,
+            paymentOnAccountExists,
+            timeToPayExists,
             obligations.obligations.nonEmpty || obligationsCache.obligations.nonEmpty,
             financialData._1 > 0
           )
