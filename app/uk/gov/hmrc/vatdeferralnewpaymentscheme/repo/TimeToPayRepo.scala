@@ -18,7 +18,9 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.repo
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.modules.reactivemongo.ReactiveMongoComponent
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.collection.JSONCollection
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.TimeToPay
@@ -28,25 +30,33 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[MongoTimeToPayRepo])
 trait TimeToPayRepo {
   def addMany(timeToPay: Array[TimeToPay])
-  def deleteAll()
   def exists(vrn: String): Future[Boolean]
 }
 
 @Singleton
-class MongoTimeToPayRepo @Inject() (mongo: ReactiveMongoComponent)(implicit ec: ExecutionContext)
+class MongoTimeToPayRepo @Inject() (reactiveMongoComponent: ReactiveMongoComponent)(implicit ec: ExecutionContext)
   extends ReactiveRepository[TimeToPay, BSONObjectID] (
     collectionName = "fileImportTimeToPay",
-    mongo          = mongo.mongoConnector.db,
+    mongo          = reactiveMongoComponent.mongoConnector.db,
     TimeToPay.format,
     ReactiveMongoFormats.objectIdFormats)
   with TimeToPayRepo {
 
   def addMany(timeToPay: Array[TimeToPay]): Unit = {
-    bulkInsert(timeToPay)
-  }
-
-  def deleteAll(): Unit ={
-    removeAll()
+    mongo().collection[JSONCollection]("fileImportTimeToPayTemp").insert.many(timeToPay).onComplete(
+      _ =>
+        {
+          logger.debug("Rename collection")
+          collection.db.connection.database("admin")
+            .flatMap { adminDatabase =>
+              logger.debug(s"Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
+              adminDatabase.renameCollection(collection.db.name, "fileImportTimeToPayTemp", collection.name,true )
+            }.map { renameResult: BSONCollection =>
+            logger.debug(s"Collection '${collection.name}' renamed operation finished, result: ${renameResult}")
+            ()
+          }
+        }
+    )
   }
 
   def exists(vrn: String): Future[Boolean] = {
