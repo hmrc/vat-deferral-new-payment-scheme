@@ -32,8 +32,6 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   lazy val ddiRefNoGenMaxValue: Int = config.get[Int]("ddiRefNoGenMaxValue")
 
   lazy val folderName: String = config.get[String]("s3.folderName")
-  lazy val awsAccessId: String = config.get[String]("s3.accessId")
-  lazy val awsSecret: String = config.get[String]("s3.secret")
   lazy val bucket: String = config.get[String]("s3.bucket")
   lazy val region: String = config.get[String]("s3.region")
 

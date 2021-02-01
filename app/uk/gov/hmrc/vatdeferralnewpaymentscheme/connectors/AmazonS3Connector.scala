@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors
 
-import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.util.IOUtils
 import com.google.inject.Inject
@@ -26,13 +25,9 @@ import scala.collection.JavaConverters._
 
 class AmazonS3Connector @Inject()(config: AppConfig) {
 
-  private lazy val credentials = new BasicAWSCredentials(config.awsAccessId, config.awsSecret)
-  private lazy val provider = new AWSStaticCredentialsProvider(credentials)
-
   private lazy val s3client: AmazonS3 = {
     val builder = AmazonS3ClientBuilder
       .standard()
-      .withCredentials(provider)
       .withPathStyleAccessEnabled(true)
 
     builder.withRegion(config.region)
