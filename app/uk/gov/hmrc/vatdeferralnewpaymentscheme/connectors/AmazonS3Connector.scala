@@ -19,11 +19,15 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.util.IOUtils
 import com.google.inject.Inject
+import play.api.Logger
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.FileDetails
+
 import scala.collection.JavaConverters._
 
 class AmazonS3Connector @Inject()(config: AppConfig) {
+
+  val logger = Logger(getClass)
 
   private lazy val s3client: AmazonS3 = {
     val builder = AmazonS3ClientBuilder
@@ -39,14 +43,21 @@ class AmazonS3Connector @Inject()(config: AppConfig) {
   }
 
   def objectContentBytes(filename: String) = {
+    logger.debug(s"Get object content bytes: ${config.bucket}, $filename")
     val objectContent = s3client.getObject(config.bucket, filename).getObjectContent
     val bytes = IOUtils.toByteArray(objectContent)
     objectContent.close()
     bytes
   }
 
-  def getObject(filename: String) = s3client.getObject(config.bucket, filename)
+  def getObject(filename: String) = {
+    logger.debug(s"Get object metadata: ${config.bucket}, $filename")
+    s3client.getObject(config.bucket, filename)
+  }
 
-  def exists(filename: String): Boolean = s3client.doesObjectExist(config.bucket, filename)
+  def exists(filename: String): Boolean = {
+    logger.debug(s"Check exists bucket: ${config.bucket}, $filename")
+    s3client.doesObjectExist(config.bucket, filename)
+  }
 }
 
