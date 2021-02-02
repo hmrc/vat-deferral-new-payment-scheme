@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 
+import com.amazonaws.auth.InstanceProfileCredentialsProvider
 import com.amazonaws.services.s3.model.GetObjectTaggingRequest
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 
@@ -26,6 +27,7 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.AmazonS3Connector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.{FileDetails, PaymentOnAccount, TimeToPay}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{ImportFileRepo, PaymentOnAccountRepo, TimeToPayRepo}
+
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 
@@ -40,6 +42,7 @@ class FileImportService @Inject()(config: AppConfig)(implicit ec: ExecutionConte
       val builder = AmazonS3ClientBuilder
         .standard()
         .withPathStyleAccessEnabled(true)
+        .withCredentials(new InstanceProfileCredentialsProvider(false))
       builder.withRegion(config.region)
       builder.build()
     }
