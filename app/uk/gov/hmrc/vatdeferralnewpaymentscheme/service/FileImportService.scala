@@ -36,12 +36,11 @@ class FileImportService @Inject()(
 
   def importS3File(): Unit = {
     //importFile(config.ttpFilename, { fc => timeToPayRepo.addMany(ParseTTPFile(fc)) })
-    logger.debug(s"Get object: ${amazonS3Connector.getObject(config.ttpFilename).getObjectMetadata.getLastModified}")
+    logger.debug(s"importS3File triggered with parameters filename:${config.ttpFilename}, region:${config.region}, bucket:${config.bucket}")
+    logger.debug(s"Get object: ${amazonS3Connector.getObject(config.ttpFilename)}")
   }
 
   private def importFile(filename: String, updateCollection: (String) => Unit) : Unit = {
-
-    logger.debug(s"importFile triggers with parameters filename:$filename, region:${config.region}, bucket:${config.bucket}")
 
     if (amazonS3Connector.exists(filename)) {
       val s3FileLastModifiedDate = amazonS3Connector.getObject(filename).getObjectMetadata.getLastModified
