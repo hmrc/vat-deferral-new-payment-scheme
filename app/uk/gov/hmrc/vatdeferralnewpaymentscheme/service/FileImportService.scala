@@ -40,6 +40,8 @@ class FileImportService @Inject()(
 
   private def importFile(filename: String, updateCollection: (String) => Unit) : Unit = {
 
+    logger.debug(s"importFile triggers with parameters filename:$filename, region:${config.region}, bucket:${config.bucket}")
+
     if (amazonS3Connector.exists(filename)) {
       val s3FileLastModifiedDate = amazonS3Connector.getObject(filename).getObjectMetadata.getLastModified
 
