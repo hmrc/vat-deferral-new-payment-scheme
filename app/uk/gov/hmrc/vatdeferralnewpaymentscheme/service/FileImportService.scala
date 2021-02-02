@@ -24,9 +24,9 @@ import play.api.Logger
 import play.api.Logger.logger
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.AmazonS3Connector
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.{PaymentOnAccount, TimeToPay}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.{FileDetails, PaymentOnAccount, TimeToPay}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{ImportFileRepo, PaymentOnAccountRepo, TimeToPayRepo}
-
+import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 
 class FileImportService @Inject()(config: AppConfig)(implicit ec: ExecutionContext) {
@@ -45,7 +45,8 @@ class FileImportService @Inject()(config: AppConfig)(implicit ec: ExecutionConte
     }
 
     try {
-      val response = s3client.getObject(config.bucket, config.ttpFilename)
+      val response = s3client.listObjects(config.bucket).getObjectSummaries.asScala.map(summary => FileDetails(summary.getKey, summary.getLastModified)).toList
+      // val response = s3client.getObject(config.bucket, config.ttpFilename)
       logger.debug(s"S3 Get Object ${response}")
     } catch {
       case e: Exception => {
