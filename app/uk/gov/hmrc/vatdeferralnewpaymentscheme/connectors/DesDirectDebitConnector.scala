@@ -18,7 +18,7 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors
 
 import javax.inject.Inject
 import play.api.Logger
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit.{PaymentPlanReference, PaymentPlanRequest}
 
@@ -28,6 +28,8 @@ class DesDirectDebitConnector @Inject()(
   http: HttpClient,
   servicesConfig: ServicesConfig
 )(implicit ec: ExecutionContext) {
+
+  val logger = Logger(getClass)
 
   private def getConfig(key: String) = servicesConfig.getConfString(key, "")
 
@@ -40,6 +42,11 @@ class DesDirectDebitConnector @Inject()(
 
   def createPaymentPlan(request: PaymentPlanRequest, credentialId: String) = {
     val createPaymentPlanURL: String = s"$serviceURL/direct-debits/customers/$credentialId/instructions/payment-plans"
-    http.POST[PaymentPlanRequest, PaymentPlanReference](createPaymentPlanURL, request)
+    http.POST[PaymentPlanRequest, PaymentPlanReference](createPaymentPlanURL, request).recover {
+      case e@UpstreamErrorResponse(message, _, _, _ ) =>
+        logger.error(message)
+        throw e
+    }
+
   }
 }
