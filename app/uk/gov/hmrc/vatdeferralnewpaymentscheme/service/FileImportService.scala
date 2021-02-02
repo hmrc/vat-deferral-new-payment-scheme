@@ -35,7 +35,8 @@ class FileImportService @Inject()(
 )(implicit ec: ExecutionContext) {
 
   def importS3File(): Unit = {
-    importFile(config.ttpFilename, { fc => timeToPayRepo.addMany(ParseTTPFile(fc)) })
+    //importFile(config.ttpFilename, { fc => timeToPayRepo.addMany(ParseTTPFile(fc)) })
+    logger.debug(s"Get object: ${amazonS3Connector.getObject(config.ttpFilename).getObjectMetadata.getLastModified}")
   }
 
   private def importFile(filename: String, updateCollection: (String) => Unit) : Unit = {
