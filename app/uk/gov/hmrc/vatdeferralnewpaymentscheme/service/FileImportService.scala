@@ -48,11 +48,19 @@ class FileImportService @Inject()(config: AppConfig)(implicit ec: ExecutionConte
 
     try {
       val response = s3client.listObjects(config.bucket).getObjectSummaries.asScala.map(summary => FileDetails(summary.getKey, summary.getLastModified)).toList
-      // val response = s3client.getObject(config.bucket, config.ttpFilename)
+      logger.debug(s"S3 List Objects ${response}")
+    } catch {
+      case e: Exception => {
+        logger.error(s"S3 list object Exception: ${e}")
+      }
+    }
+
+    try {
+      val response = s3client.getObject(config.bucket, config.ttpFilename)
       logger.debug(s"S3 Get Object ${response}")
     } catch {
       case e: Exception => {
-        logger.error(s"S3 Exception: ${e}")
+        logger.error(s"S3 Get object Exception: ${e}")
       }
     }
   }
