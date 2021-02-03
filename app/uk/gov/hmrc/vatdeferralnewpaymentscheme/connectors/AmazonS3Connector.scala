@@ -26,13 +26,9 @@ import scala.collection.JavaConverters._
 
 class AmazonS3Connector @Inject()(config: AppConfig) {
 
-  private lazy val credentials = new BasicAWSCredentials(config.awsAccessId, config.awsSecret)
-  private lazy val provider = new AWSStaticCredentialsProvider(credentials)
-
   private lazy val s3client: AmazonS3 = {
     val builder = AmazonS3ClientBuilder
       .standard()
-      .withCredentials(provider)
       .withPathStyleAccessEnabled(true)
 
     builder.withRegion(config.region)
