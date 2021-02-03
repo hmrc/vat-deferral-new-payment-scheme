@@ -49,10 +49,26 @@ class FileImportService @Inject()(
       Logger.logger.debug(s"File exists: filename:$filename")
 
       val s3Object = amazonS3Connector.getObject(filename)
-      Logger.logger.debug(s"S3 Object: $s3Object")
-
       val s3FileLastModifiedDate = s3Object.getObjectMetadata.getLastModified
-      Logger.logger.debug(s"S3 Object: $s3FileLastModifiedDate")
+
+      fileImportRepo.lastModifiedDate(filename).map {
+        case Some(date) if !s3FileLastModifiedDate.after(date) =>
+          Logger.logger.debug(s"Import not required: filename:$filename s3 last modified date: ${s3FileLastModifiedDate}: mongo last modified: ${date} ")
+        case date => {
+          Logger.logger.debug(s"Import required: filename:$filename s3 last modified date: ${s3FileLastModifiedDate}: mongo last modified: ${date} ")
+
+          val objectContent = {
+            val bytes = IOUtils.toByteArray(s3Object.getObjectContent)
+            s3Object.close()
+            bytes
+          }
+
+          val contentBytes = objectContent
+          val fileContents = contentBytes.map(_.toChar).mkString
+          updateCollection(fileContents)
+          fileImportRepo.updateLastModifiedDate(filename, s3FileLastModifiedDate)
+        }
+      }
     }
     else Logger.logger.debug(s"File does not exist: $filename")
   }
