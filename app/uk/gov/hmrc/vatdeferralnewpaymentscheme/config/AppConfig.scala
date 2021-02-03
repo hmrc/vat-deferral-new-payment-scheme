@@ -35,6 +35,8 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   lazy val bucket: String = config.get[String]("s3.bucket")
   lazy val region: String = config.get[String]("s3.region")
 
+  val ttpFilename: String = config.get[String]("microservice.services.schedulers.fileimport.ttpFilename")
+
   lazy val getObligationsPath: String = config.get[String]("microservice.services.des-service.getObligationsPath")
   lazy val getFinancialDataPath: String = config.get[String]("microservice.services.des-service.getFinancialDataPath")
 

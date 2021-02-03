@@ -16,8 +16,12 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 
+import akka.stream.scaladsl.StreamConverters
+import com.amazonaws.util.IOUtils
+
 import javax.inject.Inject
 import play.api.Logger
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.AmazonS3Connector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.{PaymentOnAccount, TimeToPay}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{ImportFileRepo, PaymentOnAccountRepo, TimeToPayRepo}
@@ -28,50 +32,37 @@ class FileImportService @Inject()(
   amazonS3Connector: AmazonS3Connector,
   timeToPayRepo: TimeToPayRepo,
   paymentOnAccountRepo: PaymentOnAccountRepo,
-  fileImportRepo: ImportFileRepo
+  fileImportRepo: ImportFileRepo,
+  config: AppConfig
 )(implicit ec: ExecutionContext) {
 
+
   def importS3File(): Unit = {
-    amazonS3Connector.listOfFiles().foreach(fileDetails => {
-
-      fileImportRepo.lastModifiedDate(fileDetails.name).map {
-
-        case Some(a) if !fileDetails.lastModifiedDate.after(a) => Logger.logger.debug(s"Do nothing: file:$a s3:${fileDetails.lastModifiedDate} is after: ${fileDetails.lastModifiedDate.after(a)} ")
-        case _ => {
-
-          val contentBytes = amazonS3Connector.objectContentBytes(fileDetails.name)
-          val fileContents = contentBytes.map(_.toChar).mkString
-
-          val paymentPlans = ParseFile(fileContents, fileDetails.name)
-
-          Logger.logger.debug(s"count: ${paymentPlans.length}")
-
-          paymentOnAccountRepo.deleteAll()
-          paymentOnAccountRepo.addMany(paymentPlans.collect { case v: PaymentOnAccount => v })
-
-          timeToPayRepo.deleteAll()
-          timeToPayRepo.addMany(paymentPlans.collect { case v: TimeToPay => v })
-
-          fileImportRepo.updateLastModifiedDate(fileDetails.name, fileDetails.lastModifiedDate)
-        }
-      }
-    })
+    importFile(config.ttpFilename, { fc => timeToPayRepo.addMany(ParseTTPFile(fc)) })
   }
 
-  private def ParseFile(fileContents: String, filename: String): Array[Any] = {
-    fileContents.split('\n').map {
-      line => {
-        Logger.logger.debug(s"Line $line")
-        val lineSplit = line.split(',')
-        val category: String = lineSplit(0)
-        val vrn: String = lineSplit(1)
+  private def importFile(filename: String, updateCollection: (String) => Unit): Unit = {
 
-        if (category == "TTP") {
-          TimeToPay(vrn, filename)
-        }
-        else if (category == "POA") {
-          PaymentOnAccount(vrn, filename)
-        }
+    Logger.logger.debug(s"Import file triggered with parameters: filename:$filename, region:${config.region}, bucket:${config.bucket}")
+
+    if (amazonS3Connector.exists(filename)) {
+      Logger.logger.debug(s"File exists: filename:$filename")
+
+      val s3Object = amazonS3Connector.getObject(filename)
+      Logger.logger.debug(s"S3 Object: $s3Object")
+
+      val s3FileLastModifiedDate = s3Object.getObjectMetadata.getLastModified
+      Logger.logger.debug(s"S3 Object: $s3FileLastModifiedDate")
+    }
+    else Logger.logger.debug(s"File does not exist: $filename")
+  }
+
+  private def ParseTTPFile(fileContents: String): Array[TimeToPay] = {
+    fileContents.split('\n').drop(1).dropRight(1).map {
+      line => {
+        val lineSplit = line.split(',')
+        val vrn: String = lineSplit(1).replace("\r", "")
+        TimeToPay(vrn)
       }
     }
   }

@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors
 
-import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.util.IOUtils
 import com.google.inject.Inject
@@ -45,5 +44,9 @@ class AmazonS3Connector @Inject()(config: AppConfig) {
     objectContent.close()
     bytes
   }
+
+  def getObject(filename: String) = s3client.getObject(config.bucket, filename)
+
+  def exists(filename: String): Boolean = s3client.doesObjectExist(config.bucket, filename)
 }
 

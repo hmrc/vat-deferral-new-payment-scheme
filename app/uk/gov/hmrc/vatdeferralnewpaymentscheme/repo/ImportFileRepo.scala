@@ -44,11 +44,10 @@ class MongoImportFile @Inject() (mongo: ReactiveMongoComponent)(implicit ec: Exe
   with ImportFileRepo {
 
   def lastModifiedDate(filename: String): Future[Option[Date]] = {
-    Logger.logger.debug("last mod date")
-    find("filename" -> filename).map(a => if (a.isEmpty) None else Some(a.head.lastModifiedDate))
+    find("name" -> filename).map(a => if (a.isEmpty) None else Some(a.head.lastModifiedDate))
   }
 
-  def updateLastModifiedDate(filename: String, lastModifiedDate: Date): Unit ={
+  def updateLastModifiedDate(filename: String, lastModifiedDate: Date): Unit = {
     insert(FileDetails(filename, lastModifiedDate))
   }
 }
