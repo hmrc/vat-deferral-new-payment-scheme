@@ -42,7 +42,6 @@ class FileImportService @Inject()(config: AppConfig)(implicit ec: ExecutionConte
       val builder = AmazonS3ClientBuilder
         .standard()
         .withPathStyleAccessEnabled(true)
-        .withCredentials(new InstanceProfileCredentialsProvider(false))
       builder.withRegion(config.region)
       builder.build()
     }
