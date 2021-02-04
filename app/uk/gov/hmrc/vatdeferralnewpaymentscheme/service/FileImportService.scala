@@ -18,6 +18,7 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 
 import akka.stream.scaladsl.StreamConverters
 import com.amazonaws.util.IOUtils
+import org.joda.time.{DateTime, Seconds}
 
 import javax.inject.Inject
 import play.api.Logger
@@ -26,7 +27,8 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.AmazonS3Connector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.{PaymentOnAccount, TimeToPay}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{ImportFileRepo, PaymentOnAccountRepo, TimeToPayRepo}
 
-import scala.concurrent.ExecutionContext
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.{ExecutionContext, Future}
 
 class FileImportService @Inject()(
   amazonS3Connector: AmazonS3Connector,
@@ -41,7 +43,13 @@ class FileImportService @Inject()(
     importFile(config.ttpFilename, { fc => timeToPayRepo.addMany(ParseTTPFile(fc)) })
   }
 
-  private def importFile(filename: String, updateCollection: (String) => Unit): Unit = {
+  private def importFile(filename: String, bulkInsert: (String) => Future[Boolean]): Unit = {
+
+    val skipInitialBytesFrom = 7
+    val skipInitialBytesTo = 18
+    val bytesPerLine = 13
+    val numberOfLinesToRead = 100000
+    val byteToRead = bytesPerLine * numberOfLinesToRead
 
     Logger.logger.debug(s"Import file triggered with parameters: filename:$filename, region:${config.region}, bucket:${config.bucket}")
 
@@ -56,17 +64,40 @@ class FileImportService @Inject()(
           Logger.logger.debug(s"Import not required: filename:$filename s3 last modified date: ${s3FileLastModifiedDate}: mongo last modified: ${date} ")
         case date => {
           Logger.logger.debug(s"Import required: filename:$filename s3 last modified date: ${s3FileLastModifiedDate}: mongo last modified: ${date} ")
+          Logger.logger.debug(s"content length: ${s3Object.getObjectMetadata.getContentLength}")
+          val contentLength = s3Object.getObjectMetadata.getContentLength
 
-          val objectContent = {
-            val bytes = IOUtils.toByteArray(s3Object.getObjectContent)
-            s3Object.close()
-            bytes
+          val start = DateTime.now
+
+          def readFileContents(from: Long, to: Long): Unit = {
+
+            if (from > contentLength) {
+              Logger.logger.debug("Rename collection")
+              timeToPayRepo.renameCollection().map {
+                case true => fileImportRepo.updateLastModifiedDate(filename, s3FileLastModifiedDate)
+                case _ => throw new RuntimeException("Rename collection failed")
+              }
+              Logger.logger.debug(s"It took ${Seconds.secondsBetween(start, DateTime.now())} to import all records from file")
+            }
+
+            val contentBytes = amazonS3Connector.objectContentBytes(filename, from, to)
+            val fileContents = contentBytes.map(_.toChar).mkString
+
+            Logger.logger.debug(s"Line: from: $from, to: $to")
+
+            bulkInsert(fileContents).map {
+              case true => {
+                Logger.logger.debug("Read next chunk")
+                readFileContents(to + 1, to + byteToRead)
+              }
+              case _ => {
+                Logger.logger.debug("Throw exception")
+                throw new RuntimeException("failed to do bulk insert")
+              }
+            }
           }
 
-          val contentBytes = objectContent
-          val fileContents = contentBytes.map(_.toChar).mkString
-          updateCollection(fileContents)
-          fileImportRepo.updateLastModifiedDate(filename, s3FileLastModifiedDate)
+          readFileContents(skipInitialBytesFrom, skipInitialBytesTo + byteToRead)
         }
       }
     }
@@ -74,12 +105,18 @@ class FileImportService @Inject()(
   }
 
   private def ParseTTPFile(fileContents: String): Array[TimeToPay] = {
-    fileContents.split('\n').drop(1).dropRight(1).map {
+
+    val lst = ListBuffer[TimeToPay]()
+
+    fileContents.split("\\r?\\n").foreach {
       line => {
-        val lineSplit = line.split(',')
-        val vrn: String = lineSplit(1).replace("\r", "")
-        TimeToPay(vrn)
+        println(line)
+        if(line.startsWith("2") && line.length == 11) {
+          lst.append(TimeToPay(line.substring(2, 11)))
+        }
       }
     }
+
+    lst.toArray
   }
 }

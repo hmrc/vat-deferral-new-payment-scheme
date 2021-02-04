@@ -30,8 +30,9 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoTimeToPayRepo])
 trait TimeToPayRepo {
-  def addMany(timeToPay: Array[TimeToPay])
+  def addMany(timeToPay: Array[TimeToPay]): Future[Boolean]
   def exists(vrn: String): Future[Boolean]
+  def renameCollection(): Future[Boolean]
 }
 
 @Singleton
@@ -43,22 +44,42 @@ class MongoTimeToPayRepo @Inject() (reactiveMongoComponent: ReactiveMongoCompone
     ReactiveMongoFormats.objectIdFormats)
     with TimeToPayRepo {
 
-  def addMany(timeToPay: Array[TimeToPay]): Unit = {
-    mongo().collection[JSONCollection]("fileImportTimeToPayTemp").insert.many(timeToPay).onComplete(
-      _ =>
-      {
-        Logger.logger.debug("Rename collection")
-        collection.db.connection.database("admin")
-          .flatMap { adminDatabase =>
-            Logger.logger.debug(s"Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
-            adminDatabase.renameCollection(collection.db.name, "fileImportTimeToPayTemp", collection.name,true )
-          }.map { renameResult: BSONCollection =>
-          Logger.logger.debug(s"Collection '${collection.name}' renamed operation finished, result: ${renameResult}")
-          ()
-        }
-      }
-    )
+  def addMany(timeToPay: Array[TimeToPay]): Future[Boolean] = {
+    mongo().collection[JSONCollection]("fileImportTimeToPayTemp").insert.many(timeToPay).map(_.ok)
   }
+
+  def renameCollection(): Future[Boolean] = {
+    Logger.logger.debug("Renaming collection")
+    collection.db.connection.database("admin")
+      .flatMap { adminDatabase =>
+        Logger.logger.debug(s"Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
+        adminDatabase.renameCollection(collection.db.name, "fileImportTimeToPayTemp", collection.name, true)
+      }.map { renameResult: BSONCollection =>
+      Logger.logger.debug(s"Collection '${collection.name}' renamed operation finished, result: ${renameResult}")
+      true
+    }
+  }
+
+
+
+//  def addMany(timeToPay: Array[TimeToPay]): Unit = {
+//    mongo().collection[JSONCollection]("fileImportTimeToPayTemp").insert.many(timeToPay).onComplete(
+//      _ =>
+//      {
+//        Logger.logger.debug("Rename collection")
+//        collection.db.connection.database("admin")
+//          .flatMap { adminDatabase =>
+//            Logger.logger.debug(s"Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
+//            adminDatabase.renameCollection(collection.db.name, "fileImportTimeToPayTemp", collection.name,true )
+//          }.map { renameResult: BSONCollection =>
+//          Logger.logger.debug(s"Collection '${collection.name}' renamed operation finished, result: ${renameResult}")
+//          ()
+//        }
+//      }
+//    )
+//  }
+
+
 
   def exists(vrn: String): Future[Boolean] = {
     find("vrn" -> vrn).map(_.nonEmpty).recover{ case _ ⇒ false }
