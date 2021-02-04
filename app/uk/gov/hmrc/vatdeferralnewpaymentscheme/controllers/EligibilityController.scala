@@ -49,19 +49,20 @@ class EligibilityController @Inject()(
       a <- OptionT.liftF(paymentPlanStore.exists(vrn))
       b <- if (a) noT else OptionT.liftF(paymentOnAccountRepo.exists(vrn))
       c <- if (a || b) noT else OptionT.liftF(timeToPayRepo.exists(vrn))
-      d <- if (a || b || c) noT else OptionT.liftF(financialDataService.getFinancialData(vrn).map(x => x._1 + x._2 > 0))
-      e <- if (a || b || c || d) noT else OptionT.liftF(desConnector.getObligations(vrn).map(_.obligations.nonEmpty))
-    } yield EligibilityResponse(a, b, c, e, d)) // n.b. these last two are reversed in the case class but the call order is correct
+      d <- if (a || b || c) noT else OptionT.liftF(financialDataService.getFinancialData(vrn).map(x => (x._1 + x._2) > 0))
+      e <- if (!d) noT else OptionT.liftF(desConnector.getObligations(vrn).map(_.obligations.nonEmpty))
+    } yield EligibilityResponse(a, b, c, Some(e), d))
       .fold(
         throw new Exception("API calling problem")
       ){ result =>
-        Ok(Json.toJson(result).toString)
-      }
+      Ok(Json.toJson(result).toString)
+    }
+
   }
 
   private val noT: OptionT[Future, Boolean] = OptionT.fromOption[Future](Some(false))
 
-  private implicit def toOpt(b: Boolean):Option[Boolean] = b match {
+  implicit def toOpt(b: Boolean):Option[Boolean] = b match {
     case true => true.some
     case _ => none[Boolean]
   }

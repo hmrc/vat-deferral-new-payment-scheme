@@ -27,6 +27,5 @@ case class EligibilityResponse(
 )
 
 object EligibilityResponse {
-//  implicit val optBoolFormat = Json.format[Option[Boolean]] // TODO do we really need this?
   implicit val format = Json.format[EligibilityResponse]
 }
