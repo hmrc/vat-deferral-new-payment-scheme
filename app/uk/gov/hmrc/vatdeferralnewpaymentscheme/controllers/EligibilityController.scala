@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
-import cats.data.OptionT
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
@@ -44,23 +43,18 @@ class EligibilityController @Inject()(
   implicit ec: ExecutionContext
 ) extends BackendController(cc) {
 
+  val nof: Future[Boolean] = Future.successful(false)
   def get(vrn: String): Action[AnyContent] = Action.async { implicit request =>
     (for {
-      a <- OptionT.liftF(paymentPlanStore.exists(vrn))
-      b <- if (a) noT else OptionT.liftF(paymentOnAccountRepo.exists(vrn))
-      c <- if (a || b) noT else OptionT.liftF(timeToPayRepo.exists(vrn))
-      d <- if (a || b || c) noT else OptionT.liftF(financialDataService.getFinancialData(vrn).map(x => (x._1 + x._2) > 0))
-      e <- if (!d) noT else OptionT.liftF(desConnector.getObligations(vrn).map(_.obligations.nonEmpty))
-    } yield EligibilityResponse(a, b, c, Some(e), d))
-      .fold(
-        throw new Exception("API calling problem")
-      ){ result =>
+      a <- paymentPlanStore.exists(vrn)
+      b <- if (a) nof else paymentOnAccountRepo.exists(vrn)
+      c <- if (a || b) nof else timeToPayRepo.exists(vrn)
+      d <- if (a || b || c) nof else financialDataService.getFinancialData(vrn).map(x => (x._1 + x._2) > 0)
+      e <- if (!d) nof else desConnector.getObligations(vrn).map(_.obligations.nonEmpty)
+    } yield EligibilityResponse(a, b, c, Some(e), d)).map { result =>
       Ok(Json.toJson(result).toString)
     }
-
   }
-
-  private val noT: OptionT[Future, Boolean] = OptionT.fromOption[Future](Some(false))
 
   implicit def toOpt(b: Boolean):Option[Boolean] = b match {
     case true => true.some
