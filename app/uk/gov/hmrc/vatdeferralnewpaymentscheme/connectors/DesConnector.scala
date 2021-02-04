@@ -41,6 +41,7 @@ class DesConnector @Inject() (
   implicit val headerCarrier: HeaderCarrier = HeaderCarrier(extraHeaders = headers)
 
   def getObligations(vrn: String): Future[ObligationData] = {
+    println(s"#################################### getObligations CALL")
     val url: String = s"$serviceURL/${appConfig.getObligationsPath.replace("$vrn", vrn)}"
     http.GET[ObligationData](url) recover {
       case _: NotFoundException => ObligationData(List.empty[Obligations])
