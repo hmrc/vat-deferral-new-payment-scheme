@@ -19,15 +19,14 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.financialdata
 import play.api.libs.json.Json
 
 case class TransactionPair(
-  mainTransaction: Option[String], // max length 4
-  subTransaction: Option[String] // max length 4
+  mainTransaction: Option[String],
+  subTransaction: Option[String]
 )
 
 case class FinancialTransactions (
-  mainTransaction: Option[String], // max length 4
-  subTransaction: Option[String], // max length 4
-  periodKey: Option[String], // max length 4
-//  chargeReference: Option[String],
+  mainTransaction: Option[String],
+  subTransaction: Option[String],
+  periodKey: Option[String],
   originalAmount: Option[BigDecimal],
   outstandingAmount: Option[BigDecimal]
 ) {
