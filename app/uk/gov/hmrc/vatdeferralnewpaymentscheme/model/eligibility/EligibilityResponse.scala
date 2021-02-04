@@ -19,11 +19,11 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.eligibility
 import play.api.libs.json.Json
 
 case class EligibilityResponse(
-  paymentPlanExists: Boolean,
-  paymentOnAccoutExists: Boolean,
-  timeToPayExists: Boolean,
-  existingObligations: Boolean,
-  outstandingBalance: Boolean
+  paymentPlanExists: Option[Boolean],
+  paymentOnAccoutExists: Option[Boolean],
+  timeToPayExists: Option[Boolean],
+  existingObligations: Option[Boolean],
+  outstandingBalance: Option[Boolean]
 )
 
 object EligibilityResponse {

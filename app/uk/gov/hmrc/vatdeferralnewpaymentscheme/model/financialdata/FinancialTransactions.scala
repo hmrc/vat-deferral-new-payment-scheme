@@ -18,10 +18,25 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.financialdata
 
 import play.api.libs.json.Json
 
+case class TransactionPair(
+  mainTransaction: Option[String],
+  subTransaction: Option[String]
+)
+
 case class FinancialTransactions (
-  chargeReference: Option[String],
+  mainTransaction: Option[String],
+  subTransaction: Option[String],
+  periodKey: Option[String],
   originalAmount: Option[BigDecimal],
-  outstandingAmount: Option[BigDecimal])
+  outstandingAmount: Option[BigDecimal]
+) {
+
+  def transactionPair =
+    TransactionPair(
+      mainTransaction,
+      subTransaction
+    )
+}
 
 object FinancialTransactions {
   implicit val format = Json.format[FinancialTransactions]
