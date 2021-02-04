@@ -16,17 +16,14 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 
-import akka.stream.scaladsl.StreamConverters
-import com.amazonaws.util.IOUtils
-import org.joda.time.{DateTime, Seconds}
-
-import javax.inject.Inject
+import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import play.api.Logger
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.AmazonS3Connector
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.{PaymentOnAccount, TimeToPay}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.TimeToPay
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{ImportFileRepo, PaymentOnAccountRepo, TimeToPayRepo}
 
+import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -40,18 +37,21 @@ class FileImportService @Inject()(
 
 
   def importS3File(): Unit = {
-    importFile(config.ttpFilename, { fc => timeToPayRepo.addMany(ParseTTPFile(fc)) })
+    importFile[TimeToPay](config.ttpFilename, { case x => ParseTTPString(x) }, { fc => timeToPayRepo.addMany(fc.toArray) })
+//    importFile(config.poaFilename, { fc => { poaRepo.addMany(ParsePOAFile(fc)) } })
+//    importFile(config.leacyFilename, { fc => { legacyRepo.addMany(ParseLegacyFile(fc)) } })
   }
 
-  private def importFile(filename: String, bulkInsert: (String) => Future[Boolean]): Unit = {
-
-    val skipInitialBytesFrom = 7
-    val skipInitialBytesTo = 18
-    val bytesPerLine = 13
-    val numberOfLinesToRead = 100000
-    val byteToRead = bytesPerLine * numberOfLinesToRead
+  private def importFile[A](filename: String, func1: PartialFunction[String, A], bulkInsert: (Seq[A]) => Future[Boolean]): Unit = {
 
     Logger.logger.debug(s"Import file triggered with parameters: filename:$filename, region:${config.region}, bucket:${config.bucket}")
+
+    val s3client = AmazonS3ClientBuilder
+      .standard()
+      .withRegion("eu-west-1")
+      .build()
+
+    Logger.logger.debug(s"${s3client.getObject("paulthor", config.ttpFilename)}")
 
     if (amazonS3Connector.exists(filename)) {
       Logger.logger.debug(s"File exists: filename:$filename")
@@ -63,60 +63,29 @@ class FileImportService @Inject()(
         case Some(date) if !s3FileLastModifiedDate.after(date) =>
           Logger.logger.debug(s"Import not required: filename:$filename s3 last modified date: ${s3FileLastModifiedDate}: mongo last modified: ${date} ")
         case date => {
+
           Logger.logger.debug(s"Import required: filename:$filename s3 last modified date: ${s3FileLastModifiedDate}: mongo last modified: ${date} ")
           Logger.logger.debug(s"content length: ${s3Object.getObjectMetadata.getContentLength}")
-          val contentLength = s3Object.getObjectMetadata.getContentLength
 
-          val start = DateTime.now
-
-          def readFileContents(from: Long, to: Long): Unit = {
-
-            if (from > contentLength) {
-              Logger.logger.debug("Rename collection")
-              timeToPayRepo.renameCollection().map {
-                case true => fileImportRepo.updateLastModifiedDate(filename, s3FileLastModifiedDate)
-                case _ => throw new RuntimeException("Rename collection failed")
-              }
-              Logger.logger.debug(s"It took ${Seconds.secondsBetween(start, DateTime.now())} to import all records from file")
+          amazonS3Connector.chunk(filename, func1, bulkInsert).map(x => {
+            timeToPayRepo.renameCollection().map {
+              case true => fileImportRepo.updateLastModifiedDate(filename, s3FileLastModifiedDate)
+              case _ => throw new RuntimeException("Rename collection failed")
             }
-
-            val contentBytes = amazonS3Connector.objectContentBytes(filename, from, to)
-            val fileContents = contentBytes.map(_.toChar).mkString
-
-            Logger.logger.debug(s"Line: from: $from, to: $to")
-
-            bulkInsert(fileContents).map {
-              case true => {
-                Logger.logger.debug("Read next chunk")
-                readFileContents(to + 1, to + byteToRead)
-              }
-              case _ => {
-                Logger.logger.debug("Throw exception")
-                throw new RuntimeException("failed to do bulk insert")
-              }
-            }
-          }
-
-          readFileContents(skipInitialBytesFrom, skipInitialBytesTo + byteToRead)
+          })
         }
       }
     }
     else Logger.logger.debug(s"File does not exist: $filename")
   }
 
-  private def ParseTTPFile(fileContents: String): Array[TimeToPay] = {
-
-    val lst = ListBuffer[TimeToPay]()
-
-    fileContents.split("\\r?\\n").foreach {
-      line => {
-        println(line)
-        if(line.startsWith("2") && line.length == 11) {
-          lst.append(TimeToPay(line.substring(2, 11)))
-        }
-      }
+  private def ParseTTPString(line: String): TimeToPay = {
+    //  TODO: Discuss Validation
+    if (line.startsWith("2") && line.length == 11) {
+      TimeToPay(line.substring(2, 11))
     }
-
-    lst.toArray
+    else{
+      TimeToPay("error")
+    }
   }
 }

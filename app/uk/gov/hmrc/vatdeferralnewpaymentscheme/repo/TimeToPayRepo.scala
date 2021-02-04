@@ -45,7 +45,10 @@ class MongoTimeToPayRepo @Inject() (reactiveMongoComponent: ReactiveMongoCompone
     with TimeToPayRepo {
 
   def addMany(timeToPay: Array[TimeToPay]): Future[Boolean] = {
-    mongo().collection[JSONCollection]("fileImportTimeToPayTemp").insert.many(timeToPay).map(_.ok)
+    mongo()
+      .collection[JSONCollection]("fileImportTimeToPayTemp")
+      .insert
+      .many(timeToPay.filter(x => x.vrn != "error")).map(_.ok)
   }
 
   def renameCollection(): Future[Boolean] = {

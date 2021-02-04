@@ -16,14 +16,20 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors
 
+import akka.actor.ActorSystem
+import akka.stream.scaladsl.{Framing, Sink, Source}
+import akka.util.ByteString
 import com.amazonaws.services.s3.model.GetObjectRequest
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.util.IOUtils
-import com.google.inject.Inject
+import com.gilt.gfc.aws.s3.akka.S3DownloaderSource._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.FileDetails
 
+import javax.inject.Inject
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 class AmazonS3Connector @Inject()(config: AppConfig) {
 
@@ -46,6 +52,36 @@ class AmazonS3Connector @Inject()(config: AppConfig) {
     val bytes = IOUtils.toByteArray(objectContent)
     objectContent.close()
     bytes
+  }
+
+  val splitter = Framing.delimiter(
+    ByteString("\n"),
+    maximumFrameLength = 1024,
+    allowTruncation = true
+  )
+
+  implicit val system: ActorSystem = ActorSystem("QuickStart")
+  implicit val ec = system.dispatcher
+  implicit val materializer = akka.stream.ActorMaterializer()
+
+  def chunk[A](filename: String, func1: PartialFunction[String, A], func2: Seq[A] => Future[Boolean]) = {
+    val chunkSize = 1024 * 1024 // 1 Mb chunks to request from S3
+    val memoryBufferSize = 128 * 1024 // 128 Kb buffer
+
+    val source = Source.s3ChunkedDownload(
+      s3client,
+      config.bucket,
+      filename,
+      chunkSize,
+      memoryBufferSize
+    ).via(splitter)
+      .map(_.utf8String.trim)
+      .collect(func1)
+      .grouped(10000) // TODO: Transformation collect
+
+    source.runWith(Sink.fold(Future.successful(true)) {
+      case (acc, x) => Await.ready(func2(x), Duration.Inf) // acc.flatMap(_ => func2(x))
+    })
   }
 
   def getObject(filename: String) = s3client.getObject(config.bucket, filename)
