@@ -19,13 +19,18 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Framing, Sink, Source}
 import akka.util.ByteString
+import com.amazonaws.services.s3.model.S3Object
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.gilt.gfc.aws.s3.akka.S3DownloaderSource._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
+
 import javax.inject.Inject
 import scala.concurrent.Future
 
-class AmazonS3Connector @Inject()(config: AppConfig) {
+class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSystem) {
+
+  implicit val ec = system.dispatcher
+  implicit val materializer = akka.stream.ActorMaterializer()
 
   private lazy val s3client: AmazonS3 = {
     val builder = AmazonS3ClientBuilder
@@ -42,11 +47,7 @@ class AmazonS3Connector @Inject()(config: AppConfig) {
     allowTruncation = true
   )
 
-  implicit val system: ActorSystem = ActorSystem("QuickStart")
-  implicit val ec = system.dispatcher
-  implicit val materializer = akka.stream.ActorMaterializer()
-
-  def chunkFileDownload[A](filename: String, func1: PartialFunction[String, A], func2: Seq[A] => Future[Boolean]) = {
+  def chunkFileDownload[A](filename: String, func1: PartialFunction[String, A], func2: Seq[A] => Future[Boolean]): Future[Boolean] = {
     val chunkSize = 1024 * 1024 // 1 Mb chunks to request from S3
     val memoryBufferSize = 128 * 1024 // 128 Kb buffer
 
@@ -66,7 +67,7 @@ class AmazonS3Connector @Inject()(config: AppConfig) {
     })
   }
 
-  def getObject(filename: String) = s3client.getObject(config.bucket, filename)
+  def getObject(filename: String): S3Object = s3client.getObject(config.bucket, filename)
 
   def exists(filename: String): Boolean = s3client.doesObjectExist(config.bucket, filename)
 }
