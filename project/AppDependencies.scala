@@ -10,7 +10,8 @@ object AppDependencies {
     "uk.gov.hmrc"             %% "simple-reactivemongo"       % "7.31.0-play-27",
     "com.amazonaws"           % "aws-java-sdk-s3"             % "1.11.915",
     "uk.gov.hmrc"             %% "stub-data-generator"        % "0.5.3",
-    "org.typelevel"           %% "cats-core"                  % "2.1.1"
+    "org.typelevel"           %% "cats-core"                  % "2.1.1",
+    "com.gilt"                %% "gfc-aws-s3"                 % "0.1.0"
   )
 
   val test = Seq(

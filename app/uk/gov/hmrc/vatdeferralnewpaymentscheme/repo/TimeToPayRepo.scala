@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.repo
 
-import cats.implicits._
-
 import com.google.inject.{ImplementedBy, Inject, Singleton}
+import play.api.Logger
 import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.indexes.{Index, IndexType}
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.collection.JSONCollection
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.TimeToPay
@@ -30,38 +30,40 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoTimeToPayRepo])
 trait TimeToPayRepo {
-  def addMany(timeToPay: Array[TimeToPay])
-  def deleteAll()
+  def addMany(timeToPay: Array[TimeToPay]): Future[Boolean]
   def exists(vrn: String): Future[Boolean]
+  def renameCollection(): Future[Boolean]
 }
 
 @Singleton
-class MongoTimeToPayRepo @Inject() (mongo: ReactiveMongoComponent)(implicit ec: ExecutionContext)
+class MongoTimeToPayRepo @Inject() (reactiveMongoComponent: ReactiveMongoComponent)(implicit ec: ExecutionContext)
   extends ReactiveRepository[TimeToPay, BSONObjectID] (
     collectionName = "fileImportTimeToPay",
-    mongo          = mongo.mongoConnector.db,
+    mongo          = reactiveMongoComponent.mongoConnector.db,
     TimeToPay.format,
     ReactiveMongoFormats.objectIdFormats)
-  with TimeToPayRepo {
+    with TimeToPayRepo {
 
-  def addMany(timeToPay: Array[TimeToPay]): Unit = {
-    bulkInsert(timeToPay)
+  def addMany(timeToPay: Array[TimeToPay]): Future[Boolean] = {
+    mongo()
+      .collection[JSONCollection]("fileImportTimeToPayTemp")
+      .insert
+      .many(timeToPay.filter(x => x.vrn != "error")).map(_.ok)
   }
 
-  def deleteAll(): Unit ={
-    removeAll()
+  def renameCollection(): Future[Boolean] = {
+    Logger.logger.debug("Renaming collection")
+    collection.db.connection.database("admin")
+      .flatMap { adminDatabase =>
+        Logger.logger.debug(s"Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
+        adminDatabase.renameCollection(collection.db.name, "fileImportTimeToPayTemp", collection.name, true)
+      }.map { renameResult: BSONCollection =>
+      Logger.logger.debug(s"Collection '${collection.name}' renamed operation finished, result: ${renameResult}")
+      true
+    }
   }
 
   def exists(vrn: String): Future[Boolean] = {
     find("vrn" -> vrn).map(_.nonEmpty).recover{ case _ ⇒ false }
   }
-
-  override def indexes: Seq[Index] = Seq(
-    Index(
-      name = "vrnIndex".some,
-      key = Seq( "vrn" -> IndexType.Ascending),
-      background = true,
-      unique = true
-    )
-  )
 }

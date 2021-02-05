@@ -18,7 +18,7 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport
 
 import play.api.libs.json.Json
 
-case class TimeToPay(vrn: String, filename: String)
+case class TimeToPay(vrn: String)
 
 object TimeToPay {
   implicit val format = Json.format[TimeToPay]
