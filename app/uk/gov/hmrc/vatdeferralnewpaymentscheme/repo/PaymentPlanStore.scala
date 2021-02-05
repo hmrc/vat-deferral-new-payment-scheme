@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.repo
 
-
+import cats.implicits._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.modules.reactivemongo.ReactiveMongoComponent
+import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
@@ -48,4 +49,14 @@ class MongoPaymentPlanStore @Inject() (mongo: ReactiveMongoComponent)(implicit e
   def add(vrn: String): Unit ={
     insert(PaymentPlan(vrn))
   }
+
+  override def indexes: Seq[Index] = Seq(
+    Index(
+      name = "vrnIndex".some,
+      key = Seq( "vrn" -> IndexType.Ascending),
+      background = true,
+      unique = true
+    )
+  )
+
 }
