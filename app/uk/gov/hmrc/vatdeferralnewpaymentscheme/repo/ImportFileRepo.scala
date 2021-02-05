@@ -56,7 +56,7 @@ class MongoImportFile @Inject() (mongo: ReactiveMongoComponent)(implicit ec: Exe
   override def indexes: Seq[Index] = Seq(
     Index(
       name = "fileNameIndex".some,
-      key = Seq( "filename" -> IndexType.Ascending),
+      key = Seq( "name" -> IndexType.Ascending),
       background = true,
       unique = true
     )
