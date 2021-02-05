@@ -18,9 +18,11 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.repo
 
 import java.util.Date
 
+import cats.implicits._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.Logger
 import play.modules.reactivemongo.ReactiveMongoComponent
+import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
@@ -51,4 +53,13 @@ class MongoImportFile @Inject() (mongo: ReactiveMongoComponent)(implicit ec: Exe
   def updateLastModifiedDate(filename: String, lastModifiedDate: Date): Unit ={
     insert(FileDetails(filename, lastModifiedDate))
   }
+
+  override def indexes: Seq[Index] = Seq(
+    Index(
+      name = "fileNameIndex".some,
+      key = Seq( "filename" -> IndexType.Ascending),
+      background = true,
+      unique = true
+    )
+  )
 }

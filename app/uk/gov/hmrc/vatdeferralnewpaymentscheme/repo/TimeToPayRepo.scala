@@ -16,8 +16,11 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.repo
 
+import cats.implicits._
+
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.modules.reactivemongo.ReactiveMongoComponent
+import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
@@ -52,4 +55,13 @@ class MongoTimeToPayRepo @Inject() (mongo: ReactiveMongoComponent)(implicit ec: 
   def exists(vrn: String): Future[Boolean] = {
     find("vrn" -> vrn).map(_.nonEmpty).recover{ case _ ⇒ false }
   }
+
+  override def indexes: Seq[Index] = Seq(
+    Index(
+      name = "vrnIndex".some,
+      key = Seq( "vrn" -> IndexType.Ascending),
+      background = true,
+      unique = true
+    )
+  )
 }
