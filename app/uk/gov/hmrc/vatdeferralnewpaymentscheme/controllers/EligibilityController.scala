@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
+import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
@@ -42,32 +43,22 @@ class EligibilityController @Inject()(
   implicit ec: ExecutionContext
 ) extends BackendController(cc) {
 
+  val nof: Future[Boolean] = Future.successful(false)
   def get(vrn: String): Action[AnyContent] = Action.async { implicit request =>
-
-    for {
-      paymentPlanExists      <- paymentPlanStore.exists(vrn)
-      paymentOnAccountExists <- paymentOnAccountRepo.exists(vrn)
-      timeToPayExists        <- timeToPayRepo.exists(vrn)
-      obligations            <- desConnector.getObligations(vrn)
-      obligationsCache       <- obligations.obligations match {
-        case Nil => desCacheConnector.getVatCacheObligations(vrn)
-        case _ => Future.successful(obligations)
-      }
-      financialData          <- financialDataService.getFinancialData(vrn)
-    } yield {
-      val eligibilityResponse =
-        Json.toJson(
-          EligibilityResponse(
-            paymentPlanExists,
-            paymentOnAccountExists,
-            timeToPayExists,
-            obligations.obligations.nonEmpty || obligationsCache.obligations.nonEmpty,
-            financialData._1 > 0
-          )
-        ).toString()
-      Ok(eligibilityResponse)
+    (for {
+      a <- paymentPlanStore.exists(vrn)
+      b <- if (a) nof else paymentOnAccountRepo.exists(vrn)
+      c <- if (a || b) nof else timeToPayRepo.exists(vrn)
+      d <- if (a || b || c) nof else financialDataService.getFinancialData(vrn).map(x => (x._1 + x._2) > 0)
+      e <- if (!d) nof else desConnector.getObligations(vrn).map(_.obligations.nonEmpty)
+    } yield EligibilityResponse(a, b, c, Some(e), d)).map { result =>
+      Ok(Json.toJson(result).toString)
     }
   }
 
+  implicit def toOpt(b: Boolean):Option[Boolean] = b match {
+    case true => true.some
+    case _ => none[Boolean]
+  }
 }
 
