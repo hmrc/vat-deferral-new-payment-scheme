@@ -46,8 +46,7 @@ class MongoImportFile @Inject() (mongo: ReactiveMongoComponent)(implicit ec: Exe
   with ImportFileRepo {
 
   def lastModifiedDate(filename: String): Future[Option[Date]] = {
-    Logger.logger.debug("last mod date")
-    find("filename" -> filename).map(a => if (a.isEmpty) None else Some(a.head.lastModifiedDate))
+    find("name" -> filename).map(_.headOption.map{_.lastModifiedDate})
   }
 
   def updateLastModifiedDate(filename: String, lastModifiedDate: Date): Unit ={
@@ -57,7 +56,7 @@ class MongoImportFile @Inject() (mongo: ReactiveMongoComponent)(implicit ec: Exe
   override def indexes: Seq[Index] = Seq(
     Index(
       name = "fileNameIndex".some,
-      key = Seq( "filename" -> IndexType.Ascending),
+      key = Seq( "name" -> IndexType.Ascending),
       background = true,
       unique = true
     )

@@ -18,7 +18,7 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport
 
 import play.api.libs.json.Json
 
-case class PaymentOnAccount(vrn: String, filename: String)
+case class PaymentOnAccount(vrn: String)
 
 object PaymentOnAccount {
   implicit val format = Json.format[PaymentOnAccount]
