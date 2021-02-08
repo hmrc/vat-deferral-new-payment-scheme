@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors
 
+import com.google.inject.ImplementedBy
 import javax.inject.Inject
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -23,10 +24,17 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement.TimeToPayArrang
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class DesTimeToPayArrangementConnector @Inject()(
+@ImplementedBy(classOf[DesTimeToPayArrangementConnectorImpl])
+trait DesTimeToPayArrangementConnector {
+  def createArrangement(vrn: String, timeToPayArrangementRequest: TimeToPayArrangementRequest): Future[HttpResponse]
+}
+
+class DesTimeToPayArrangementConnectorImpl @Inject()(
   http: HttpClient,
   servicesConfig: ServicesConfig
-)(implicit ec: ExecutionContext) {
+)(
+  implicit ec: ExecutionContext
+) extends DesTimeToPayArrangementConnector {
 
   private def getConfig(key: String) = servicesConfig.getConfString(key, "")
 
@@ -38,7 +46,9 @@ class DesTimeToPayArrangementConnector @Inject()(
   implicit val headerCarrier: HeaderCarrier = HeaderCarrier(extraHeaders = headers)
 
   def createArrangement(
-    vrn: String, timeToPayArrangementRequest: TimeToPayArrangementRequest
+    vrn: String,
+    timeToPayArrangementRequest:
+    TimeToPayArrangementRequest
   ): Future[HttpResponse] = {
     val url: String = s"${serviceURL}/time-to-pay/02.00.00/vrn/$vrn/arrangements"
     http.POST[TimeToPayArrangementRequest, HttpResponse](url, timeToPayArrangementRequest)
