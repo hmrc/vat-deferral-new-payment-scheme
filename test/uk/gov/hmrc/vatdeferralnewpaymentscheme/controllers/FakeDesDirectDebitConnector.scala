@@ -25,7 +25,6 @@ class FakeDesDirectDebitConnector(seed: Int) extends DesDirectDebitConnector {
 
   override def createPaymentPlan(request: PaymentPlanRequest, credentialId: String): Future[PaymentPlanReference] = seed match {
     case 201 =>
-      println(s"ddConn returns 201")
       Future.successful(PaymentPlanReference("foo","bar", Seq(DdiReference("foo")), Seq(PpReference("bar"))))
     case 400 => ??? // TODO not sure this is possible to test without changing the return type, possibly to an Either[FailureResponse,PaymentPlanReference]
     case 404 => ???
