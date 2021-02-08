@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors
 
+import com.google.inject.ImplementedBy
 import javax.inject.Inject
 import play.api.Logger
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, UpstreamErrorResponse}
@@ -24,10 +25,17 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit.{PaymentPlanRef
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class DesDirectDebitConnector @Inject()(
+@ImplementedBy(classOf[DesDirectDebitConnectorImpl])
+trait DesDirectDebitConnector {
+  def createPaymentPlan(request: PaymentPlanRequest, credentialId: String):Future[PaymentPlanReference]
+}
+
+class DesDirectDebitConnectorImpl @Inject()(
   http: HttpClient,
   servicesConfig: ServicesConfig
-)(implicit ec: ExecutionContext) {
+)(
+  implicit ec: ExecutionContext
+) extends DesDirectDebitConnector {
 
   val logger = Logger(getClass)
 

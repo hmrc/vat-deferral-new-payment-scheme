@@ -143,13 +143,13 @@ class DirectDebitArrangementController @Inject()(
           b <- desTimeToPayArrangementConnector.createArrangement(vrn, arrangement)
         } yield {
           (a,b) match {
-            case (_:PaymentPlanReference, y) if y.status == 200 =>
+            case (_:PaymentPlanReference, y) if y.status == 202 =>
               paymentPlanStore.add(vrn)
               logger.info("createPaymentPlan and createArrangement has been successful")
               Created("")
             case (_:PaymentPlanReference, e) =>
               logger.warn(s"unable to set up time to pay arrangement ${e.body}")
-              NotAcceptable("Unable to set up direct debit payment plan & arrangement")
+              NotAcceptable("Unable to set up time to pay arrangement")
             case e =>
               logger.warn(s"unable to set up direct debit payment plan & arrangement $e")
               NotAcceptable("Unable to set up direct debit payment plan & arrangement")
