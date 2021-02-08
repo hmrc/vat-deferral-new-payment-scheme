@@ -17,6 +17,7 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors
 
 import javax.inject.Inject
+import play.api.Logger
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, NotFoundException}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
@@ -29,6 +30,8 @@ class DesCacheConnector @Inject() (
   servicesConfig: ServicesConfig,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext) {
+
+  val logger = Logger(getClass)
 
   private def getConfig(key: String) = servicesConfig.getConfString(key, "")
 
@@ -43,7 +46,9 @@ class DesCacheConnector @Inject() (
   def getVatCacheObligations(vrn: String): Future[ObligationData] = {
     val url: String = s"$serviceURL/${appConfig.getVatCacheObligationsPath.replace("$vrn", vrn)}"
     http.GET[ObligationData](url) recover {
-      case _: NotFoundException => ObligationData(List.empty[Obligations])
+      case _: NotFoundException =>
+        logger.info("No CacheObligations found")
+        ObligationData(List.empty[Obligations])
     }
   }
 }

@@ -33,27 +33,29 @@ class FileImportService @Inject()(
    config: AppConfig
  )(implicit ec: ExecutionContext) {
 
+  val logger = Logger(getClass)
+
   def importS3File(): Unit = {
     importFile[TimeToPay](config.ttpFilename, { case x => ParseTTPString(x) }, { fc => timeToPayRepo.addMany(fc.toArray) })
   }
 
   private def importFile[A](filename: String, func1: PartialFunction[String, A], bulkInsert: (Seq[A]) => Future[Boolean]): Unit = {
 
-    Logger.logger.debug(s"Import file triggered with parameters: filename:$filename, region:${config.region}, bucket:${config.bucket}")
+    logger.debug(s"Import file triggered with parameters: filename:$filename, region:${config.region}, bucket:${config.bucket}")
 
     if (amazonS3Connector.exists(filename)) {
-      Logger.logger.debug(s"File exists: filename:$filename")
+      logger.debug(s"File exists: filename:$filename")
 
       val s3Object = amazonS3Connector.getObject(filename)
       val s3FileLastModifiedDate = s3Object.getObjectMetadata.getLastModified
 
       fileImportRepo.lastModifiedDate(filename).map {
         case Some(date) if !s3FileLastModifiedDate.after(date) =>
-          Logger.logger.debug(s"Import not required: filename:$filename s3 last modified date: ${s3FileLastModifiedDate}: mongo last modified: ${date} ")
+          logger.debug(s"Import not required: filename:$filename s3 last modified date: $s3FileLastModifiedDate: mongo last modified: $date ")
         case date => {
 
-          Logger.logger.debug(s"Import required: filename:$filename s3 last modified date: ${s3FileLastModifiedDate}: mongo last modified: ${date} ")
-          Logger.logger.debug(s"content length: ${s3Object.getObjectMetadata.getContentLength}")
+          logger.debug(s"Import required: filename:$filename s3 last modified date: $s3FileLastModifiedDate: mongo last modified: $date ")
+          logger.debug(s"content length: ${s3Object.getObjectMetadata.getContentLength}")
 
           amazonS3Connector.chunkFileDownload(filename, func1, bulkInsert).map(x => {
             timeToPayRepo.renameCollection().map {
@@ -64,7 +66,7 @@ class FileImportService @Inject()(
         }
       }
     }
-    else Logger.logger.debug(s"File does not exist: $filename")
+    else logger.warn(s"File does not exist: $filename")
   }
 
   private def ParseTTPString(line: String): TimeToPay = {
@@ -73,6 +75,7 @@ class FileImportService @Inject()(
       TimeToPay(line.substring(2, 11))
     }
     else{
+      logger.warn("Time to Pay String is invalid")
       TimeToPay("error") // TODO: Return an None
     }
   }

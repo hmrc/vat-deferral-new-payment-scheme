@@ -17,6 +17,7 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors
 
 import javax.inject.Inject
+import play.api.Logger
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, NotFoundException}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
@@ -31,6 +32,8 @@ class DesConnector @Inject() (
   appConfig: AppConfig
 )(implicit ec: ExecutionContext) {
 
+  val logger = Logger(getClass)
+
   private def getConfig(key: String) = servicesConfig.getConfString(key, "")
 
   lazy val serviceURL: String = servicesConfig.baseUrl("des-service")
@@ -43,7 +46,9 @@ class DesConnector @Inject() (
   def getObligations(vrn: String): Future[ObligationData] = {
     val url: String = s"$serviceURL/${appConfig.getObligationsPath.replace("$vrn", vrn)}"
     http.GET[ObligationData](url) recover {
-      case _: NotFoundException => ObligationData(List.empty[Obligations])
+      case _: NotFoundException =>
+        logger.info("No Obligations found")
+        ObligationData(List.empty[Obligations])
     }
   }
 
