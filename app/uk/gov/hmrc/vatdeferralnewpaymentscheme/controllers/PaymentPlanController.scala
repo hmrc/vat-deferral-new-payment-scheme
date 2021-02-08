@@ -17,6 +17,7 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
 import javax.inject.{Inject, Singleton}
+import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -32,13 +33,17 @@ class PaymentPlanController @Inject()(
   cc: ControllerComponents,
   paymentPlanService: PaymentPlanService
 )(implicit ec: ExecutionContext) extends BackendController(cc) {
+  val logger = Logger(getClass)
 
   def get(vrn: String): Action[AnyContent] = Action.async { implicit request =>
     paymentPlanService.exists(vrn).map { exists => {
-      if (exists)
+      if (exists) {
+        logger.info("vrn exists in PaymentPlanService")
         Ok(Json.toJson(PaymentPlan(vrn)))
-      else
+      } else {
+        logger.info("vrn NotFound in PaymentPlanService")
         NotFound("")
+      }
     }
     }
   }

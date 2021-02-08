@@ -17,6 +17,7 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
 import javax.inject.{Inject, Singleton}
+import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.http.HttpClient
@@ -35,12 +36,16 @@ class FinancialDataController @Inject()(
   financialDataService: FinancialDataService
 )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
+  val logger = Logger(getClass)
+
   def get(vrn: String): Action[AnyContent] = Action.async { implicit request =>
     for {
       financialData <- financialDataService.getFinancialData(vrn)
     } yield {
       val fd = FinancialDataResponse(financialData._1.toString, financialData._2.toString)
       val financialDataResponse = Json.toJson(fd).toString()
+
+      logger.info("FinancialDataResponse was retrieved successfully")
       Ok(financialDataResponse)
     }
   }

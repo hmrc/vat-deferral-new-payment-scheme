@@ -20,7 +20,8 @@ import java.time.LocalDate
 
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
-import play.api.mvc.ControllerComponents
+import play.api.libs.json.JsValue
+import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesDirectDebitConnector, DesTimeToPayArrangementConnector}
@@ -46,7 +47,7 @@ class DirectDebitArrangementController @Inject()(
 
   val logger = Logger(this.getClass)
 
-  def post(vrn: String) = Action.async(parse.json) { implicit request =>
+  def post(vrn: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
     withJsonBody[DirectDebitArrangementRequest] {
       ddar => {
 
@@ -122,6 +123,7 @@ class DirectDebitArrangementController @Inject()(
           (a,b) match {
             case (_:PaymentPlanReference, y) if y.status == 200 =>
               paymentPlanStore.add(vrn)
+              logger.info("createPaymentPlan and createArrangement has been successful")
               Created("")
             case (_:PaymentPlanReference, e) =>
               logger.warn(s"unable to set up time to pay arrangement ${e.body}")

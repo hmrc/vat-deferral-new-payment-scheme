@@ -18,6 +18,7 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
+import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -43,7 +44,9 @@ class EligibilityController @Inject()(
   implicit ec: ExecutionContext
 ) extends BackendController(cc) {
 
+  val logger = Logger(getClass)
   val nof: Future[Boolean] = Future.successful(false)
+
   def get(vrn: String): Action[AnyContent] = Action.async { implicit request =>
     (for {
       a <- paymentPlanStore.exists(vrn)
@@ -52,6 +55,7 @@ class EligibilityController @Inject()(
       d <- if (a || b || c) nof else financialDataService.getFinancialData(vrn).map(x => (x._1 + x._2) > 0)
       e <- if (!d) nof else desConnector.getObligations(vrn).map(_.obligations.nonEmpty)
     } yield EligibilityResponse(a, b, c, Some(e), d)).map { result =>
+      logger.info("EligibilityResponse was retrieved successfully")
       Ok(Json.toJson(result).toString)
     }
   }
