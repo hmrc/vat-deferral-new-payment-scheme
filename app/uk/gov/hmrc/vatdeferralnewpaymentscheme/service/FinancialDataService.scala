@@ -40,6 +40,7 @@ class FinancialDataService @Inject()(
       TransactionPair(Some("4731"),Some("1174")),
       TransactionPair(Some("4732"),Some("1174")),
       TransactionPair(Some("4733"),Some("1174")),
+      TransactionPair(Some("4700"),Some("1174"))
     )
 
   def getFinancialData(vrn: String)(implicit hc: HeaderCarrier): Future[(BigDecimal, BigDecimal)] = {
