@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
-import java.time.LocalDate
-
+import java.time.{LocalDate, LocalDateTime, ZoneId, ZonedDateTime}
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.JsValue
@@ -31,6 +30,7 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.DirectDebitGenService
 
+import java.time.format.DateTimeFormatter
 import scala.concurrent.ExecutionContext
 import scala.math.BigDecimal.RoundingMode
 
@@ -47,6 +47,27 @@ class DirectDebitArrangementController @Inject()(
 
   val logger = Logger(this.getClass)
 
+  def firstPaymentDate: ZonedDateTime = { // TODO: Refactor to pass in from FE
+    val now = ZonedDateTime.now.withZoneSameInstant(ZoneId.of("Europe/London"))
+
+    val serviceStart: ZonedDateTime =
+      ZonedDateTime.of(
+        LocalDateTime.of(2021,2,15,1,1,1),
+        ZoneId.of("Europe/London")
+      )
+    val today = if (now.isAfter(serviceStart)) now else serviceStart
+    today match {
+      case d if d.getDayOfMonth >= 15 && d.getDayOfMonth <= 22 && d.getMonthValue == 2 =>
+        d.withDayOfMonth(3).withMonth(3)
+      case d if d.plusDays(5).getDayOfWeek.getValue <= 5 =>
+        d.plusDays(5)
+      case d if d.plusDays(5).getDayOfWeek.getValue == 6 =>
+        d.plusDays(7)
+      case d if d.plusDays(5).getDayOfWeek.getValue == 7 =>
+        d.plusDays(6)
+    }
+  }
+
   def post(vrn: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
     withJsonBody[DirectDebitArrangementRequest] {
       ddar => {
@@ -57,8 +78,8 @@ class DirectDebitArrangementController @Inject()(
         val scheduledPaymentAmount = (totalAmountToPay / numberOfPayments).setScale(2, RoundingMode.DOWN)
         val firstPaymentAmount = scheduledPaymentAmount + (totalAmountToPay - (scheduledPaymentAmount * numberOfPayments))
 
-        val startDate = LocalDate.now.withDayOfMonth(ddar.paymentDay)
-        val endDate = startDate.plusMonths(numberOfPayments - 1)
+        val startDate = firstPaymentDate.toLocalDate // TODO: Review toLocalDate
+        val endDate =   firstPaymentDate.toLocalDate.plusMonths(numberOfPayments - 1) // TODO: Review toLocalDate
 
         val directDebitInstructionRequest = DirectDebitInstructionRequest(
           ddar.sortCode,
@@ -78,33 +99,35 @@ class DirectDebitArrangementController @Inject()(
           firstPaymentAmount.toString,
           startDate,
           scheduledPaymentAmount.toString,
-          startDate.plusMonths(1),
-          endDate,
+          startDate.withDayOfMonth(ddar.paymentDay).plusMonths(1),
+          endDate.withDayOfMonth(ddar.paymentDay).minusMonths(1),
           "Calendar Monthly",
-          totalAmountToPay.toString
+          totalAmountToPay.toString,
+          endDate.withDayOfMonth(ddar.paymentDay),
+          scheduledPaymentAmount.toString
         )
 
+        val now = ZonedDateTime.now.withZoneSameInstant(ZoneId.of("Europe/London"))
         val paymentPlanRequest = PaymentPlanRequest(
           "VDNPS",
-          LocalDate.now().toString,
+          now.format(DateTimeFormatter.ISO_INSTANT),
           Seq(KnownFact("VRN", vrn)),
           directDebitInstructionRequest,
           paymentPlan,
           printFlag = false
         )
 
-
         val reviewDate = endDate.plusWeeks(3)
 
         val dd: Seq[DebitDetails] = (0 until numberOfPayments).map {
           month => {
-            DebitDetails("IN2", startDate.plusMonths(month).toString)
+            DebitDetails("IN2", startDate.withDayOfMonth(ddar.paymentDay).plusMonths(month).toString)
           }
         }
 
         val ttpArrangement = TtpArrangement(
           LocalDate.now.toString,
-          endDate.toString,
+          endDate.withDayOfMonth(ddar.paymentDay).toString,
           startDate.toString,
           firstPaymentAmount.toString,
           scheduledPaymentAmount.toString,

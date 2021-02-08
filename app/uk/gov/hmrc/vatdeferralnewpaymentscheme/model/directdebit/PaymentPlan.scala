@@ -30,7 +30,9 @@ case class PaymentPlan(
                         scheduledPaymentStartDate: LocalDate,
                         scheduledPaymentEndDate:   LocalDate,
                         scheduledPaymentFrequency: String,
-                        totalLiability:            String)
+                        totalLiability:            String,
+                        balancingPaymentDate:      LocalDate,
+                        balancingPaymentAmount:    String)
 
 object PaymentPlan {
   implicit val format = Json.format[PaymentPlan]
