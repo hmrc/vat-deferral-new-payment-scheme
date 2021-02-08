@@ -28,7 +28,13 @@ class DirectDebitGenService @Inject()(
     val min = appConfig.ddiRefNoGenMinValue
     val max = appConfig.ddiRefNoGenMaxValue
     
-    DDIRefGen.genDDIRefNumber(min, max).seeded(vrn.hashCode.toLong)
+    val gen = DDIRefGen.genDDIRefNumber(min, max)
+    //For QA we need to retrieve different DDIRef's from one UTR
+    //This should never be enabled in production
+      if (appConfig.useRandomDDIRefSeed)
+        gen.sample
+      else
+        gen.seeded(vrn.hashCode.toLong)
   }
 
 }

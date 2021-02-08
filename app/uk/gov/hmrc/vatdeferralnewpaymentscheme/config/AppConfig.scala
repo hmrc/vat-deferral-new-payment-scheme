@@ -26,6 +26,7 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   val authBaseUrl: String = servicesConfig.baseUrl("auth")
 
   val auditingEnabled: Boolean = config.get[Boolean]("auditing.enabled")
+  val useRandomDDIRefSeed: Boolean = config.get[Boolean]("useRandomDDIRefSeed")
   val graphiteHost: String     = config.get[String]("microservice.metrics.graphite.host")
 
   lazy val ddiRefNoGenMinValue: Int = config.get[Int]("ddiRefNoGenMinValue")
