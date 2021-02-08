@@ -47,9 +47,9 @@ class DirectDebitArrangementController @Inject()(
 
   val logger = Logger(this.getClass)
 
-  def firstPaymentDate: ZonedDateTime = { // TODO: Refactor to pass in from FE
-    val now = ZonedDateTime.now.withZoneSameInstant(ZoneId.of("Europe/London"))
+  private lazy val now: ZonedDateTime = ZonedDateTime.now.withZoneSameInstant(ZoneId.of("Europe/London"))
 
+  def firstPaymentDate: ZonedDateTime = { // TODO: Refactor to pass in from FE
     val serviceStart: ZonedDateTime =
       ZonedDateTime.of(
         LocalDateTime.of(2021,2,15,1,1,1),
@@ -107,7 +107,6 @@ class DirectDebitArrangementController @Inject()(
           scheduledPaymentAmount.toString
         )
 
-        val now = ZonedDateTime.now.withZoneSameInstant(ZoneId.of("Europe/London"))
         val paymentPlanRequest = PaymentPlanRequest(
           "VDNPS",
           now.format(DateTimeFormatter.ISO_INSTANT),
