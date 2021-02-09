@@ -32,7 +32,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoTimeToPayRepo])
 trait TimeToPayRepo {
-  def addMany(timeToPay: Array[TimeToPay]): Future[Boolean]
+  def addMany(timeToPay: Array[TimeToPay]): Future[Unit]
   def exists(vrn: String): Future[Boolean]
   def renameCollection(): Future[Boolean]
 }
@@ -46,7 +46,7 @@ class MongoTimeToPayRepo @Inject() (reactiveMongoComponent: ReactiveMongoCompone
     ReactiveMongoFormats.objectIdFormats)
     with TimeToPayRepo {
 
-  def addMany(timeToPay: Array[TimeToPay]): Future[Boolean] = {
+  def addMany(timeToPay: Array[TimeToPay]): Future[Unit] = {
     mongo()
       .collection[JSONCollection]("fileImportTimeToPayTemp")
       .insert

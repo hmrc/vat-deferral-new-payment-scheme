@@ -47,7 +47,7 @@ class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSyste
     allowTruncation = true
   )
 
-  def chunkFileDownload[A](filename: String, func1: PartialFunction[String, A], func2: Seq[A] => Future[Boolean]): Future[Boolean] = {
+  def chunkFileDownload[A](filename: String, func1: PartialFunction[String, A], func2: Seq[A] => Future[Unit]): Future[Unit] = {
     val chunkSize = 1024 * 1024 // 1 Mb chunks to request from S3
     val memoryBufferSize = 128 * 1024 // 128 Kb buffer
 
@@ -62,7 +62,7 @@ class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSyste
       .collect(func1)
       .grouped(10000)
 
-    source.runWith(Sink.foldAsync(true) {
+    source.runWith(Sink.foldAsync() {
       case (acc, x) => func2(x)
     })
   }
