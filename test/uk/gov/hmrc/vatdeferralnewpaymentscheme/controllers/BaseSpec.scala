@@ -25,6 +25,7 @@ import play.api.test.{FakeRequest, Helpers}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import org.scalatestplus.mockito.MockitoSugar
+import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.DirectDebitGenService
 
@@ -40,6 +41,7 @@ class BaseSpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with M
   val cc = Helpers.stubControllerComponents()
   implicit val materializer: Materializer = app.materializer
   implicit val executionContext = app.injector.instanceOf[ExecutionContext]
+  implicit val auditConnector   = mock[AuditConnector]
 
   val ddService = app.injector.instanceOf[DirectDebitGenService]
   lazy val ppStore = mock[PaymentPlanStore]

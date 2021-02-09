@@ -16,20 +16,56 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
-import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.{HttpResponse, UpstreamErrorResponse}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.DesTimeToPayArrangementConnector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement.TimeToPayArrangementRequest
 
 import scala.concurrent.Future
 
 class FakeDesTimeToPayArrangementConnector(seed: Int) extends DesTimeToPayArrangementConnector {
-  override def createArrangement(vrn: String, timeToPayArrangementRequest: TimeToPayArrangementRequest): Future[HttpResponse] = seed match {
-    case 202 => Future.successful(HttpResponse.apply(202,""))
-    case 4001 => Future.successful(HttpResponse.apply(400,"""{code:"INVALID_IDTYPE"}"""))
-    case 4002 => Future.successful(HttpResponse.apply(400,"""{code:"INVALID_IDVALUE"}"""))
-    case 4003 => Future.successful(HttpResponse.apply(400,"""{code:"INVALID_PAYLOAD"}"""))
-    case 4004 => Future.successful(HttpResponse.apply(400,"""{code:"INVALID_CORRELATIONID"}"""))
-    case 500 => Future.successful(HttpResponse.apply(500,""))
-    case 503 => Future.successful(HttpResponse.apply(503,""))
+  override def createArrangement(
+    vrn: String,
+    timeToPayArrangementRequest: TimeToPayArrangementRequest
+  ): Future[Either[UpstreamErrorResponse,HttpResponse]] = seed match {
+    case 202 =>
+      Future.successful(
+        Right(HttpResponse.apply(202,""))
+      )
+    case 4001 =>
+      Future.successful(
+        Left(
+          UpstreamErrorResponse("""{code:"INVALID_IDTYPE"}""",400)
+        )
+      )
+    case 4002 =>
+      Future.successful(
+        Left(
+          UpstreamErrorResponse("""{code:"INVALID_IDVALUE"}""", 400)
+        )
+      )
+    case 4003 =>
+      Future.successful(
+        Left(
+          UpstreamErrorResponse("""{code:"INVALID_PAYLOAD"}""",400)
+        )
+      )
+    case 4004 =>
+      Future.successful(
+        Left(
+          UpstreamErrorResponse("""{code:"INVALID_CORRELATIONID"}""",400)
+        )
+      )
+    case 500 =>
+      Future.successful(
+        Left(
+          UpstreamErrorResponse("SERVER_ERROR",500,500)
+        )
+      )
+    case 503 =>
+      Future.successful(
+        Left(
+          UpstreamErrorResponse("SERVICE_UNAVAILABLE",503,503)
+        )
+      )
   }
 }

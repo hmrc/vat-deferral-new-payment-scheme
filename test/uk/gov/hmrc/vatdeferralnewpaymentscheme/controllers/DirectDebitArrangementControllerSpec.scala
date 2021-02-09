@@ -46,13 +46,13 @@ class DirectDebitArrangementControllerSpec extends BaseSpec {
       val result = controller.post("9999999999").apply(FakeRequest("POST", "/direct-debit-arrangement/:vrn",fakeHeaders, fakeBody))
       status(result) shouldBe Status.CREATED
     }
-    "return 406" in {
+    "also return Created" in {
       val controller = testController(
         new FakeDesDirectDebitConnector(201),
         new FakeDesTimeToPayArrangementConnector(4001)
       )
       val result = controller.post("9999999999").apply(FakeRequest("POST", "/direct-debit-arrangement/:vrn",fakeHeaders, fakeBody))
-      status(result) shouldBe Status.NOT_ACCEPTABLE
+      status(result) shouldBe Status.CREATED
     }
   }
 
