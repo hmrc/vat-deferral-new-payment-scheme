@@ -16,13 +16,22 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme
 
-import play.api.libs.json.Writes
+import play.api.libs.json.{Json, Writes}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement.TtpArrangement
 
 import scala.concurrent.ExecutionContext
 
 package object controllers {
+
+  case class TtpArrangementAuditWrapper(
+    vrn: String,
+    timeToPayArrangement: TtpArrangement
+  )
+  object TtpArrangementAuditWrapper {
+    implicit val format = Json.format[TtpArrangementAuditWrapper]
+  }
 
   def audit[T](
     auditType: String,

@@ -158,19 +158,25 @@ class DirectDebitArrangementController @Inject()(
             case (Right(ppr:PaymentPlanReference), Left(e)) =>
               logger.warn(s"unable to set up time to pay arrangement for $vrn, error response: ${e.message}")
               audit[PaymentPlanReference]("CreatePaymentPlanSuccess", ppr)
-              audit[TtpArrangement]("CreateArrangementFailure", ttpArrangement)
+              audit[TtpArrangementAuditWrapper](
+                "CreateArrangementFailure",
+                TtpArrangementAuditWrapper(vrn,ttpArrangement)
+              )
               // n.b. we fail silently as there is a manual intervention to fix user state
               Created
             case (Left(UpstreamErrorResponse(message, status, _, _)), _) =>
               logger.warn(s"$status unable to set up direct debit payment plan & arrangement: $message")
               auditConnector.sendExplicitAudit(
-                "CreatePaymentFailure",
+                "CreatePaymentPlanFailure",
                 Map(
                   "status" -> status.toString,
                   "message" -> message
                 )
               )
-              audit[TtpArrangement]("CreateArrangementFailure", ttpArrangement)
+              audit[TtpArrangementAuditWrapper](
+                "CreateArrangementFailure",
+                TtpArrangementAuditWrapper(vrn,ttpArrangement)
+              )
               Created
           }
         }

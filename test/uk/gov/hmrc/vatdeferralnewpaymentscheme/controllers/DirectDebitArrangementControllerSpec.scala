@@ -38,7 +38,7 @@ class DirectDebitArrangementControllerSpec extends BaseSpec {
   val fakeBody: JsValue = Json.toJson(fakeDirectDebitArrangementRequest)
 
   "GET /" should {
-    "return Created" in {
+    "return Created for happy path" in {
       val controller = testController(
         new FakeDesDirectDebitConnector(201),
         new FakeDesTimeToPayArrangementConnector(202)
@@ -46,7 +46,7 @@ class DirectDebitArrangementControllerSpec extends BaseSpec {
       val result = controller.post("9999999999").apply(FakeRequest("POST", "/direct-debit-arrangement/:vrn",fakeHeaders, fakeBody))
       status(result) shouldBe Status.CREATED
     }
-    "also return Created" in {
+    "also return Created for unhappy path" in {
       val controller = testController(
         new FakeDesDirectDebitConnector(201),
         new FakeDesTimeToPayArrangementConnector(4001)
