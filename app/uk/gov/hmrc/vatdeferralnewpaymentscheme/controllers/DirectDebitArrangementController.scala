@@ -16,11 +16,15 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
+import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime, ZoneId, ZonedDateTime}
+
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.JsValue
 import play.api.mvc.{Action, ControllerComponents}
+import uk.gov.hmrc.http.UpstreamErrorResponse
+import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesDirectDebitConnector, DesTimeToPayArrangementConnector}
@@ -30,7 +34,6 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.DirectDebitGenService
 
-import java.time.format.DateTimeFormatter
 import scala.concurrent.ExecutionContext
 import scala.math.BigDecimal.RoundingMode
 
@@ -42,7 +45,10 @@ class DirectDebitArrangementController @Inject()(
   desTimeToPayArrangementConnector: DesTimeToPayArrangementConnector,
   paymentPlanStore: PaymentPlanStore,
   directDebitService: DirectDebitGenService
-)(implicit ec: ExecutionContext)
+)(
+  implicit ec: ExecutionContext,
+  auditConnector: AuditConnector
+)
   extends BackendController(cc) {
 
   val logger = Logger(this.getClass)
@@ -143,16 +149,29 @@ class DirectDebitArrangementController @Inject()(
           b <- desTimeToPayArrangementConnector.createArrangement(vrn, arrangement)
         } yield {
           (a,b) match {
-            case (_:PaymentPlanReference, y) if y.status == 202 =>
+            case (Right(ppr:PaymentPlanReference), Right(y)) if y.status == 202 =>
               paymentPlanStore.add(vrn)
+              audit[PaymentPlanReference]("CreatePaymentPlanSuccess", ppr)
+              audit[TtpArrangement]("CreateArrangementSuccess", ttpArrangement)
               logger.info("createPaymentPlan and createArrangement has been successful")
-              Created("")
-            case (_:PaymentPlanReference, e) =>
-              logger.warn(s"unable to set up time to pay arrangement ${e.body}")
-              NotAcceptable("Unable to set up time to pay arrangement")
-            case e =>
-              logger.warn(s"unable to set up direct debit payment plan & arrangement $e")
-              NotAcceptable("Unable to set up direct debit payment plan & arrangement")
+              Created
+            case (Right(ppr:PaymentPlanReference), Left(e)) =>
+              logger.warn(s"unable to set up time to pay arrangement for $vrn, error response: ${e.message}")
+              audit[PaymentPlanReference]("CreatePaymentPlanSuccess", ppr)
+              audit[TtpArrangement]("CreateArrangementFailure", ttpArrangement)
+              // n.b. we fail silently as there is a manual intervention to fix user state
+              Created
+            case (Left(UpstreamErrorResponse(message, status, _, _)), _) =>
+              logger.warn(s"$status unable to set up direct debit payment plan & arrangement: $message")
+              auditConnector.sendExplicitAudit(
+                "CreatePaymentFailure",
+                Map(
+                  "status" -> status.toString,
+                  "message" -> message
+                )
+              )
+              audit[TtpArrangement]("CreateArrangementFailure", ttpArrangement)
+              Created
           }
         }
       }

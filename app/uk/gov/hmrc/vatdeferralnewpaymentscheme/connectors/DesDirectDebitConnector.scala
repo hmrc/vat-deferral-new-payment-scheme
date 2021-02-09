@@ -27,7 +27,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[DesDirectDebitConnectorImpl])
 trait DesDirectDebitConnector {
-  def createPaymentPlan(request: PaymentPlanRequest, credentialId: String):Future[PaymentPlanReference]
+  def createPaymentPlan(
+    request: PaymentPlanRequest,
+    credentialId: String
+  ): Future[Either[UpstreamErrorResponse,PaymentPlanReference]]
 }
 
 class DesDirectDebitConnectorImpl @Inject()(
@@ -48,13 +51,16 @@ class DesDirectDebitConnectorImpl @Inject()(
   val headers = Seq("Authorization" -> authorizationToken, "Environment" -> environment)
   implicit val headerCarrier: HeaderCarrier = HeaderCarrier(extraHeaders = headers)
 
-  def createPaymentPlan(request: PaymentPlanRequest, credentialId: String): Future[PaymentPlanReference] = {
-    val createPaymentPlanURL: String = s"$serviceURL/direct-debits/customers/$credentialId/instructions/payment-plans"
-    http.POST[PaymentPlanRequest, PaymentPlanReference](createPaymentPlanURL, request).recover {
-      case e@UpstreamErrorResponse(message, _, _, _ ) =>
-        logger.error(s"createPaymentPlan failed with message:$message")
-        throw e
-    }
-
+  import uk.gov.hmrc.http.HttpReadsInstances._
+  def createPaymentPlan(
+    request: PaymentPlanRequest,
+    credentialId: String
+  ): Future[Either[UpstreamErrorResponse,PaymentPlanReference]] = {
+    val createPaymentPlanURL: String =
+      s"$serviceURL/direct-debits/customers/$credentialId/instructions/payment-plans"
+    http.POST[PaymentPlanRequest, Either[UpstreamErrorResponse,PaymentPlanReference]](
+      createPaymentPlanURL,
+      request
+    )
   }
 }
