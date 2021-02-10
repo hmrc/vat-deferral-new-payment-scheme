@@ -16,15 +16,16 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 
+import java.util.Date
+
+import javax.inject.Inject
 import play.api.Logger
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.AmazonS3Connector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.TimeToPay
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{ImportFileRepo, LockRepository, PaymentOnAccountRepo, TimeToPayRepo}
 
-import javax.inject.Inject
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 class FileImportService @Inject()(
    amazonS3Connector: AmazonS3Connector,
@@ -38,10 +39,28 @@ class FileImportService @Inject()(
   val logger = Logger(getClass)
 
   def importS3File(): Unit = {
-    withLock(1)(importFile[TimeToPay](config.ttpFilename, { case x => ParseTTPString(x) }, { fc => timeToPayRepo.addMany(fc.toArray) }))
+      importFile[TimeToPay](
+        config.ttpFilename,
+        { case x => ParseTTPString(x) },
+        { fc => timeToPayRepo.addMany(fc.toArray) }
+      )
   }
 
-  private def importFile[A](filename: String, func1: PartialFunction[String, A], bulkInsert: (Seq[A]) => Future[Unit]): Future[Unit] = {
+  def afterImport(
+    s3FileLastModifiedDate: Date,
+    filename: String
+  ): Future[Unit] = {
+    for {
+      _ <- timeToPayRepo.renameCollection()
+      _ <- fileImportRepo.updateLastModifiedDate(filename, s3FileLastModifiedDate)
+    } yield ()
+  }
+
+  private def importFile[A](
+    filename: String,
+    func1: PartialFunction[String, A],
+    bulkInsert: (Seq[A]) => Future[Unit]
+  ): Future[Unit] = {
 
     Logger.logger.info(s"filename: $filename: Import file triggered with parameters: region:${config.region}, bucket:${config.bucket}")
 
@@ -50,7 +69,7 @@ class FileImportService @Inject()(
         Logger.logger.info(s"filename: $filename: Exists")
 
         val s3Object = amazonS3Connector.getObject(filename)
-        val s3FileLastModifiedDate = s3Object.getObjectMetadata.getLastModified
+        val s3FileLastModifiedDate: Date = s3Object.getObjectMetadata.getLastModified
 
         fileImportRepo.lastModifiedDate(filename).map {
           x => {
@@ -60,21 +79,15 @@ class FileImportService @Inject()(
                 Logger.logger.info(s"filename: $filename: Import required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date ")
                 Logger.logger.info(s"filename: $filename: content length: ${s3Object.getObjectMetadata.getContentLength}")
 
-                val downloadFileAndImport = amazonS3Connector.chunkFileDownload(filename, func1, bulkInsert)
-
-                val renameCollection = {
-                  timeToPayRepo.renameCollection().map {
-                    case true => {
-                      Logger.logger.info(s"filename: $filename: Updating last modified date")
-                      fileImportRepo.updateLastModifiedDate(filename, s3FileLastModifiedDate)
-                      Logger.logger.info(s"filename: $filename: Completed import")
-                    }
-                    case _ => throw new RuntimeException(s"filename:$filename: Rename collection failed")
-                  }
+                withLock(1) {
+                  amazonS3Connector
+                    .chunkFileDownload(
+                      filename,
+                      func1,
+                      bulkInsert,
+                      afterImport(s3FileLastModifiedDate, filename)
+                    )
                 }
-
-                Await.result(downloadFileAndImport, Duration.Inf) // TODO: Remove this await
-                Await.result(renameCollection, Duration.Inf)      // TODO: Remove this await
               }
             }
           }
