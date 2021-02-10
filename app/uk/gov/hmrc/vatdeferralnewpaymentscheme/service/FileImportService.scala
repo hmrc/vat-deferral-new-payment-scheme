@@ -43,11 +43,11 @@ class FileImportService @Inject()(
 
   private def importFile[A](filename: String, func1: PartialFunction[String, A], bulkInsert: (Seq[A]) => Future[Unit]): Future[Unit] = {
 
-    Logger.logger.debug(s"Import file triggered with parameters: filename:$filename, region:${config.region}, bucket:${config.bucket}")
+    Logger.logger.info(s"filename: $filename: Import file triggered with parameters: region:${config.region}, bucket:${config.bucket}")
 
     try {
       if (amazonS3Connector.exists(filename)) {
-        Logger.logger.debug(s"File exists: filename:$filename")
+        Logger.logger.info(s"filename: $filename: Exists")
 
         val s3Object = amazonS3Connector.getObject(filename)
         val s3FileLastModifiedDate = s3Object.getObjectMetadata.getLastModified
@@ -55,21 +55,21 @@ class FileImportService @Inject()(
         fileImportRepo.lastModifiedDate(filename).map {
           x => {
             x match {
-              case Some(date) if !s3FileLastModifiedDate.after(date) => Logger.logger.debug(s"Import not required: filename:$filename s3 last modified date: $s3FileLastModifiedDate: mongo last modified: $date ")
+              case Some(date) if !s3FileLastModifiedDate.after(date) => Logger.logger.info(s"filename: $filename: Import not required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date ")
               case date => {
-                Logger.logger.debug(s"Import required: filename:$filename s3 last modified date: $s3FileLastModifiedDate: mongo last modified: $date ")
-                Logger.logger.debug(s"content length: ${s3Object.getObjectMetadata.getContentLength}")
+                Logger.logger.info(s"filename: $filename: Import required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date ")
+                Logger.logger.info(s"filename: $filename: content length: ${s3Object.getObjectMetadata.getContentLength}")
 
                 val downloadFileAndImport = amazonS3Connector.chunkFileDownload(filename, func1, bulkInsert)
 
                 val renameCollection = {
                   timeToPayRepo.renameCollection().map {
                     case true => {
-                      Logger.logger.debug("Updating last modified date")
+                      Logger.logger.info(s"filename: $filename: Updating last modified date")
                       fileImportRepo.updateLastModifiedDate(filename, s3FileLastModifiedDate)
-                      Logger.logger.debug("Completed import")
+                      Logger.logger.info(s"filename: $filename: Completed import")
                     }
-                    case _ => throw new RuntimeException("Rename collection failed")
+                    case _ => throw new RuntimeException(s"filename:$filename: Rename collection failed")
                   }
                 }
 
@@ -81,12 +81,12 @@ class FileImportService @Inject()(
         }
       }
       else {
-        Logger.logger.warn(s"File does not exist: $filename")
+        Logger.logger.warn(s"filename: $filename: File does not exist")
         Future.successful[Unit]()
       }
     } catch {
       case e => {
-        Logger.logger.error(s"File import error: $e")
+        Logger.logger.error(s"filename: $filename: File import error: $e")
         Future.successful[Unit]()
       }
     }
@@ -98,7 +98,7 @@ class FileImportService @Inject()(
       TimeToPay(line.substring(2, 11))
     }
     else{
-      logger.warn("Time to Pay String is invalid")
+      logger.info("Time to Pay String is invalid")
       TimeToPay("error") // TODO: Return an None
     }
   }
