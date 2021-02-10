@@ -17,11 +17,11 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.repo
 
 import java.util.Date
-
 import cats.implicits._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.Logger
 import play.modules.reactivemongo.ReactiveMongoComponent
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.ReactiveRepository
@@ -33,7 +33,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[MongoImportFile])
 trait ImportFileRepo {
   def lastModifiedDate(filename: String): Future[Option[Date]]
-  def updateLastModifiedDate(filename: String, lastModifiedDate: Date)
+  def updateLastModifiedDate(filename: String, lastModifiedDate: Date): Future[WriteResult]
 }
 
 @Singleton
@@ -49,7 +49,7 @@ class MongoImportFile @Inject() (mongo: ReactiveMongoComponent)(implicit ec: Exe
     find("name" -> filename).map(_.headOption.map{_.lastModifiedDate})
   }
 
-  def updateLastModifiedDate(filename: String, lastModifiedDate: Date): Unit ={
+  def updateLastModifiedDate(filename: String, lastModifiedDate: Date): Future[WriteResult] ={
     insert(FileDetails(filename, lastModifiedDate))
   }
 
