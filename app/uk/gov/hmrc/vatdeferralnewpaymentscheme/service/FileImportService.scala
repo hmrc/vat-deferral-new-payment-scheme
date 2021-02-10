@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 
-import java.util.Date
+import akka.actor.ActorSystem
 
+import java.util.Date
 import javax.inject.Inject
 import play.api.Logger
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
@@ -28,13 +29,12 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{ImportFileRepo, LockReposit
 import scala.concurrent.{ExecutionContext, Future}
 
 class FileImportService @Inject()(
-   amazonS3Connector: AmazonS3Connector,
    timeToPayRepo: TimeToPayRepo,
    paymentOnAccountRepo: PaymentOnAccountRepo,
    fileImportRepo: ImportFileRepo,
    lockRepository: LockRepository,
    config: AppConfig
- )(implicit ec: ExecutionContext) {
+ )(implicit ec: ExecutionContext, system: ActorSystem) {
 
   val logger = Logger(getClass)
 
@@ -63,6 +63,8 @@ class FileImportService @Inject()(
   ): Future[Unit] = {
 
     logger.info(s"filename: $filename: Import file triggered with parameters: region:${config.region}, bucket:${config.bucket}")
+
+    val amazonS3Connector = new AmazonS3Connector(config)
 
     try {
       if (amazonS3Connector.exists(filename)) {
