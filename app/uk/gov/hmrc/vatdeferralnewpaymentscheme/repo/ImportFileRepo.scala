@@ -51,6 +51,7 @@ class MongoImportFile @Inject() (mongo: ReactiveMongoComponent)(implicit ec: Exe
   }
 
   def updateLastModifiedDate(filename: String, lastModifiedDate: Date): Future[WriteResult] = {
+    logger.info(s"filename: $filename: Updated last modified date")
     insert(FileDetails(filename, lastModifiedDate))
   }
 

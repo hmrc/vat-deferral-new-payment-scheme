@@ -62,11 +62,11 @@ class FileImportService @Inject()(
     bulkInsert: (Seq[A]) => Future[Unit]
   ): Future[Unit] = {
 
-    Logger.logger.info(s"filename: $filename: Import file triggered with parameters: region:${config.region}, bucket:${config.bucket}")
+    logger.info(s"filename: $filename: Import file triggered with parameters: region:${config.region}, bucket:${config.bucket}")
 
     try {
       if (amazonS3Connector.exists(filename)) {
-        Logger.logger.info(s"filename: $filename: Exists")
+        logger.info(s"filename: $filename: Exists")
 
         val s3Object = amazonS3Connector.getObject(filename)
         val s3FileLastModifiedDate: Date = s3Object.getObjectMetadata.getLastModified
@@ -74,12 +74,13 @@ class FileImportService @Inject()(
         fileImportRepo.lastModifiedDate(filename).map {
           x => {
             x match {
-              case Some(date) if !s3FileLastModifiedDate.after(date) => Logger.logger.info(s"filename: $filename: Import not required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date ")
+              case Some(date) if !s3FileLastModifiedDate.after(date) => logger.info(s"filename: $filename: Import not required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date ")
               case date => {
-                Logger.logger.info(s"filename: $filename: Import required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date ")
-                Logger.logger.info(s"filename: $filename: content length: ${s3Object.getObjectMetadata.getContentLength}")
 
                 withLock(1) {
+
+                  logger.info(s"filename: $filename: Import required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date: content length: ${s3Object.getObjectMetadata.getContentLength}")
+
                   amazonS3Connector
                     .chunkFileDownload(
                       filename,
@@ -94,12 +95,12 @@ class FileImportService @Inject()(
         }
       }
       else {
-        Logger.logger.warn(s"filename: $filename: File does not exist")
+        logger.warn(s"filename: $filename: File does not exist")
         Future.successful[Unit]()
       }
     } catch {
       case e => {
-        Logger.logger.error(s"filename: $filename: File import error: $e")
+        logger.error(s"filename: $filename: File import error: $e")
         Future.successful[Unit]()
       }
     }

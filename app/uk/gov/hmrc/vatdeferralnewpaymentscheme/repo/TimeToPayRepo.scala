@@ -54,13 +54,12 @@ class MongoTimeToPayRepo @Inject() (reactiveMongoComponent: ReactiveMongoCompone
   }
 
   def renameCollection(): Future[Boolean] = {
-    Logger.logger.debug("Renaming collection")
     collection.db.connection.database("admin")
       .flatMap { adminDatabase =>
-        Logger.logger.debug(s"Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
+        logger.debug(s"Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
         adminDatabase.renameCollection(collection.db.name, "fileImportTimeToPayTemp", collection.name, true)
       }.map { renameResult: BSONCollection =>
-      Logger.logger.debug(s"Collection '${collection.name}' renamed operation finished, result: ${renameResult}")
+      logger.debug(s"'${collection.name}' collection renamed operation finished, result: ${renameResult}")
       true
     }
   }
