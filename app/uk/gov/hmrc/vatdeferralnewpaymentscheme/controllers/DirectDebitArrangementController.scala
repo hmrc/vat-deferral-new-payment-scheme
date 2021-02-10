@@ -151,19 +151,43 @@ class DirectDebitArrangementController @Inject()(
           (a,b) match {
             case (Right(ppr:PaymentPlanReference), Right(y)) if y.status == 202 =>
               paymentPlanStore.add(vrn)
-              audit[PaymentPlanReference]("CreatePaymentPlanSuccess", ppr)
-              audit[TtpArrangement]("CreateArrangementSuccess", ttpArrangement)
+              audit[PaymentPlanReference](
+                "CreatePaymentPlanSuccess",
+                ppr
+              )
+              audit[TtpArrangementAuditWrapper](
+                "CreateArrangementSuccess",
+                TtpArrangementAuditWrapper(vrn,ttpArrangement)
+              )
               logger.info("createPaymentPlan and createArrangement has been successful")
               Created
             case (Right(ppr:PaymentPlanReference), Left(e)) =>
               paymentPlanStore.add(vrn)
               logger.warn(s"unable to set up time to pay arrangement for $vrn, error response: ${e.message}")
-              audit[PaymentPlanReference]("CreatePaymentPlanSuccess", ppr)
+              audit[PaymentPlanReference](
+                "CreatePaymentPlanSuccess",
+                ppr
+              )
               audit[TtpArrangementAuditWrapper](
                 "CreateArrangementFailure",
                 TtpArrangementAuditWrapper(vrn,ttpArrangement)
               )
               // n.b. we fail silently as there is a manual intervention to fix user state
+              Created
+            case (Left(UpstreamErrorResponse(message, status, _, _)), Right(y)) =>
+              paymentPlanStore.add(vrn)
+              auditConnector.sendExplicitAudit(
+                "CreatePaymentPlanFailure",
+                Map(
+                  "status" -> status.toString,
+                  "message" -> message
+                )
+              )
+              audit[TtpArrangementAuditWrapper](
+                "CreateArrangementSuccess",
+                TtpArrangementAuditWrapper(vrn,ttpArrangement)
+              )
+              logger.warn(s"$status unable to set up direct debit payment plan but arrangement succeeded: $message")
               Created
             case (Left(UpstreamErrorResponse(message, status, _, _)), _) =>
               paymentPlanStore.add(vrn)
