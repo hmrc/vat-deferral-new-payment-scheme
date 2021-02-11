@@ -22,9 +22,9 @@ import akka.util.ByteString
 import com.amazonaws.services.s3.model.S3Object
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.gilt.gfc.aws.s3.akka.S3DownloaderSource._
+import javax.inject.Inject
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 
-import javax.inject.Inject
 import scala.concurrent.Future
 
 class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSystem) {
@@ -47,7 +47,12 @@ class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSyste
     allowTruncation = true
   )
 
-  def chunkFileDownload[A](filename: String, func1: PartialFunction[String, A], func2: Seq[A] => Future[Boolean]): Future[Boolean] = {
+  def chunkFileDownload[A](
+    filename: String,
+    func1: PartialFunction[String, A],
+    func2: Seq[A] => Future[Unit],
+    func3: => Future[Unit]
+  ): Future[Unit] = {
     val chunkSize = 1024 * 1024 // 1 Mb chunks to request from S3
     val memoryBufferSize = 128 * 1024 // 128 Kb buffer
 
@@ -62,9 +67,12 @@ class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSyste
       .collect(func1)
       .grouped(10000)
 
-    source.runWith(Sink.foldAsync(true) {
-      case (acc, x) => func2(x)
-    })
+    source.runWith(Sink.foldAsync() {
+      case (acc, x) =>
+        func2(x)
+    }).map {_=>
+      func3
+    }
   }
 
   def getObject(filename: String): S3Object = s3client.getObject(config.bucket, filename)

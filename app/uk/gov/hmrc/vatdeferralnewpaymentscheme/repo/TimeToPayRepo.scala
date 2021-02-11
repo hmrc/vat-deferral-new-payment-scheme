@@ -32,7 +32,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoTimeToPayRepo])
 trait TimeToPayRepo {
-  def addMany(timeToPay: Array[TimeToPay]): Future[Boolean]
+  def addMany(timeToPay: Array[TimeToPay]): Future[Unit]
   def exists(vrn: String): Future[Boolean]
   def renameCollection(): Future[Boolean]
 }
@@ -46,7 +46,7 @@ class MongoTimeToPayRepo @Inject() (reactiveMongoComponent: ReactiveMongoCompone
     ReactiveMongoFormats.objectIdFormats)
     with TimeToPayRepo {
 
-  def addMany(timeToPay: Array[TimeToPay]): Future[Boolean] = {
+  def addMany(timeToPay: Array[TimeToPay]): Future[Unit] = {
     mongo()
       .collection[JSONCollection]("fileImportTimeToPayTemp")
       .insert
@@ -54,13 +54,12 @@ class MongoTimeToPayRepo @Inject() (reactiveMongoComponent: ReactiveMongoCompone
   }
 
   def renameCollection(): Future[Boolean] = {
-    Logger.logger.debug("Renaming collection")
     collection.db.connection.database("admin")
       .flatMap { adminDatabase =>
-        Logger.logger.debug(s"Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
+        logger.debug(s"Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
         adminDatabase.renameCollection(collection.db.name, "fileImportTimeToPayTemp", collection.name, true)
       }.map { renameResult: BSONCollection =>
-      Logger.logger.debug(s"Collection '${collection.name}' renamed operation finished, result: ${renameResult}")
+      logger.debug(s"'${collection.name}' collection renamed operation finished, result: ${renameResult}")
       true
     }
   }

@@ -16,57 +16,96 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 
+import akka.actor.ActorSystem
+
+import java.util.Date
+import javax.inject.Inject
 import play.api.Logger
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.AmazonS3Connector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.TimeToPay
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{ImportFileRepo, PaymentOnAccountRepo, TimeToPayRepo}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{ImportFileRepo, LockRepository, PaymentOnAccountRepo, TimeToPayRepo}
 
-import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class FileImportService @Inject()(
-   amazonS3Connector: AmazonS3Connector,
    timeToPayRepo: TimeToPayRepo,
    paymentOnAccountRepo: PaymentOnAccountRepo,
    fileImportRepo: ImportFileRepo,
+   lockRepository: LockRepository,
    config: AppConfig
- )(implicit ec: ExecutionContext) {
+ )(implicit ec: ExecutionContext, system: ActorSystem) {
 
   val logger = Logger(getClass)
 
   def importS3File(): Unit = {
-    importFile[TimeToPay](config.ttpFilename, { case x => ParseTTPString(x) }, { fc => timeToPayRepo.addMany(fc.toArray) })
+      importFile[TimeToPay](
+        config.ttpFilename,
+        { case x => ParseTTPString(x) },
+        { fc => timeToPayRepo.addMany(fc.toArray) }
+      )
   }
 
-  private def importFile[A](filename: String, func1: PartialFunction[String, A], bulkInsert: (Seq[A]) => Future[Boolean]): Unit = {
+  def afterImport(
+    s3FileLastModifiedDate: Date,
+    filename: String
+  ): Future[Unit] = {
+    for {
+      _ <- timeToPayRepo.renameCollection()
+      _ <- fileImportRepo.updateLastModifiedDate(filename, s3FileLastModifiedDate)
+    } yield ()
+  }
 
-    logger.debug(s"Import file triggered with parameters: filename:$filename, region:${config.region}, bucket:${config.bucket}")
+  private def importFile[A](
+    filename: String,
+    func1: PartialFunction[String, A],
+    bulkInsert: (Seq[A]) => Future[Unit]
+  ): Future[Unit] = {
 
-    if (amazonS3Connector.exists(filename)) {
-      logger.debug(s"File exists: filename:$filename")
+    logger.info(s"filename: $filename: Import file triggered with parameters: region:${config.region}, bucket:${config.bucket}")
 
-      val s3Object = amazonS3Connector.getObject(filename)
-      val s3FileLastModifiedDate = s3Object.getObjectMetadata.getLastModified
+    val amazonS3Connector = new AmazonS3Connector(config)
 
-      fileImportRepo.lastModifiedDate(filename).map {
-        case Some(date) if !s3FileLastModifiedDate.after(date) =>
-          logger.debug(s"Import not required: filename:$filename s3 last modified date: $s3FileLastModifiedDate: mongo last modified: $date ")
-        case date => {
+    try {
+      if (amazonS3Connector.exists(filename)) {
+        logger.info(s"filename: $filename: Exists")
 
-          logger.debug(s"Import required: filename:$filename s3 last modified date: $s3FileLastModifiedDate: mongo last modified: $date ")
-          logger.debug(s"content length: ${s3Object.getObjectMetadata.getContentLength}")
+        val s3Object = amazonS3Connector.getObject(filename)
+        val s3FileLastModifiedDate: Date = s3Object.getObjectMetadata.getLastModified
 
-          amazonS3Connector.chunkFileDownload(filename, func1, bulkInsert).map(x => {
-            timeToPayRepo.renameCollection().map {
-              case true => fileImportRepo.updateLastModifiedDate(filename, s3FileLastModifiedDate)
-              case _ => throw new RuntimeException("Rename collection failed")
+        fileImportRepo.lastModifiedDate(filename).map {
+          x => {
+            x match {
+              case Some(date) if !s3FileLastModifiedDate.after(date) => logger.info(s"filename: $filename: Import not required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date ")
+              case date => {
+
+                withLock(1) {
+
+                  logger.info(s"filename: $filename: Import required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date: content length: ${s3Object.getObjectMetadata.getContentLength}")
+
+                  amazonS3Connector
+                    .chunkFileDownload(
+                      filename,
+                      func1,
+                      bulkInsert,
+                      afterImport(s3FileLastModifiedDate, filename)
+                    )
+                }
+              }
             }
-          })
+          }
         }
       }
+      else {
+        logger.warn(s"filename: $filename: File does not exist")
+        Future.successful[Unit]()
+      }
+    } catch {
+      case e => {
+        logger.error(s"filename: $filename: File import error: $e")
+        Future.successful[Unit]()
+      }
     }
-    else logger.warn(s"File does not exist: $filename")
   }
 
   private def ParseTTPString(line: String): TimeToPay = {
@@ -75,8 +114,30 @@ class FileImportService @Inject()(
       TimeToPay(line.substring(2, 11))
     }
     else{
-      logger.warn("Time to Pay String is invalid")
+      logger.info("Time to Pay String is invalid")
       TimeToPay("error") // TODO: Return an None
+    }
+  }
+
+  private def withLock(id: Int)(f: => Future[Unit]): Future[Unit] = {
+    lockRepository.lock(id).flatMap {
+      gotLock =>
+        if (gotLock) {
+          f.flatMap {
+            result =>
+              lockRepository.release(id).map {
+                _ => {
+                  result
+                }
+              }
+          }.recoverWith {
+            case e =>
+              lockRepository.release(id)
+                .map { _ => throw e }
+          }
+        } else {
+          Future.successful(())
+        }
     }
   }
 }
