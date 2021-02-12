@@ -50,16 +50,19 @@ class MongoTimeToPayRepo @Inject() (reactiveMongoComponent: ReactiveMongoCompone
     mongo()
       .collection[JSONCollection]("fileImportTimeToPayTemp")
       .insert
-      .many(timeToPay.filter(x => x.vrn != "error")).map(_.ok)
+      .many(timeToPay.filter(x => x.vrn != "error")).map { w =>
+      logger.info(s"Errors writing to fileImportTimeToPayTemp ${w.writeErrors}")
+      w.ok // this is a bool t/f but return type is unit regardless
+    }
   }
 
   def renameCollection(): Future[Boolean] = {
     collection.db.connection.database("admin")
       .flatMap { adminDatabase =>
-        logger.debug(s"Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
+        logger.info(s"Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
         adminDatabase.renameCollection(collection.db.name, "fileImportTimeToPayTemp", collection.name, true)
       }.map { renameResult: BSONCollection =>
-      logger.debug(s"'${collection.name}' collection renamed operation finished, result: ${renameResult}")
+      logger.info(s"'${collection.name}' collection renamed operation finished, result: ${renameResult}")
       true
     }
   }
