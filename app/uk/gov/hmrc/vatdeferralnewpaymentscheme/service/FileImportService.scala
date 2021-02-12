@@ -17,10 +17,13 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 
 import akka.actor.ActorSystem
-
 import java.util.Date
+
+import akka.NotUsed
+import akka.stream.scaladsl.Flow
 import javax.inject.Inject
 import play.api.Logger
+import reactivemongo.api.commands.MultiBulkWriteResult
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.AmazonS3Connector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.TimeToPay
@@ -42,9 +45,17 @@ class FileImportService @Inject()(
       importFile[TimeToPay](
         config.ttpFilename,
         { case x => ParseTTPString(x) },
-        { fc => timeToPayRepo.addMany(fc.toArray) }
+        { timeToPayRepo.insertFlow}
       )
   }
+
+//  def importS3File(): Unit = {
+//      importFile[TimeToPay](
+//        config.ttpFilename,
+//        { case x => ParseTTPString(x) },
+//        { fc => timeToPayRepo.addMany(fc.toArray) }
+//      )
+//  }
 
   def afterImport(
     s3FileLastModifiedDate: Date,
@@ -59,7 +70,8 @@ class FileImportService @Inject()(
   private def importFile[A](
     filename: String,
     func1: PartialFunction[String, A],
-    bulkInsert: (Seq[A]) => Future[Unit]
+    insertFlow: Flow[Seq[A], MultiBulkWriteResult, NotUsed]//,
+//    bulkInsert: (Seq[A]) => Future[Unit] => Future[Unit]
   ): Future[Unit] = {
 
     logger.info(s"File Import: filename: $filename: Import file triggered with parameters: region:${config.region}, bucket:${config.bucket}")
@@ -87,8 +99,8 @@ class FileImportService @Inject()(
                     .chunkFileDownload(
                       filename,
                       func1,
-                      bulkInsert,
-                      afterImport(s3FileLastModifiedDate, filename)
+                      afterImport(s3FileLastModifiedDate, filename),
+                      insertFlow
                     )
                 }
               }

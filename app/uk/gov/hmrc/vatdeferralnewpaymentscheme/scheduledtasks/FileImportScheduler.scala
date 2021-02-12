@@ -22,8 +22,6 @@ import akka.actor.ActorSystem
 import com.google.inject.{AbstractModule, Provides}
 import javax.inject.{Inject, Named, Singleton}
 import play.api.{Configuration, Environment, Logger}
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.FileImportService
 
 import scala.concurrent.ExecutionContext.Implicits.global

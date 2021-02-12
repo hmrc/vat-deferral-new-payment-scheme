@@ -26,9 +26,9 @@ import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.gilt.gfc.aws.s3.akka.S3DownloaderSource._
 import javax.inject.Inject
 import play.api.Logger
+import reactivemongo.api.commands.MultiBulkWriteResult
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 
-import scala.collection.immutable
 import scala.concurrent.Future
 import scala.io.{BufferedSource, Source => IOSource}
 
@@ -84,8 +84,9 @@ class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSyste
   def chunkFileDownload[A](
     filename: String,
     func1: PartialFunction[String, A],
-    func2: Seq[A] => Future[Unit],
-    func3: => Future[Unit]
+//    func2: Seq[A] => Future[Unit],
+    func3: => Future[Unit],
+    insertFlow: Flow[Seq[A], MultiBulkWriteResult, NotUsed]
   ): Future[Unit] = {
     val chunkSize = 1024 * 1024 // 1 Mb chunks to request from S3
     val memoryBufferSize = 128 * 1024 // 128 Kb buffer
@@ -100,13 +101,20 @@ class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSyste
       .map(_.utf8String.trim)
       .collect(func1)
       .grouped(10000)
+      .via(insertFlow)
 
-    source.runWith(Sink.foldAsync() {
-      case (acc, x) =>
-        func2(x)
-    }).map {_=>
+    source.runForeach { x =>
+      logger.info(s"######################################### $x")
+    }.map { _ =>
       func3
     }
+
+//    source.runWith(Sink.foldAsync() {
+//      case (acc, x) =>
+//        func2(x)
+//    }).map {_=>
+//      func3
+//    }
   }
 
   def getObject(filename: String): S3Object = s3client.getObject(config.bucket, filename)
