@@ -16,18 +16,25 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors
 
+import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{Framing, Sink, Source}
+import akka.stream.scaladsl.{Flow, Framing, Sink, Source}
 import akka.util.ByteString
-import com.amazonaws.services.s3.model.S3Object
+import com.amazonaws.AmazonClientException
+import com.amazonaws.services.s3.model.{GetObjectRequest, S3Object}
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.gilt.gfc.aws.s3.akka.S3DownloaderSource._
 import javax.inject.Inject
+import play.api.Logger
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 
+import scala.collection.immutable
 import scala.concurrent.Future
+import scala.io.{BufferedSource, Source => IOSource}
 
 class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSystem) {
+
+  val logger = Logger(getClass)
 
   implicit val ec = system.dispatcher
   implicit val materializer = akka.stream.ActorMaterializer()
@@ -41,11 +48,42 @@ class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSyste
     builder.build()
   }
 
-  val splitter = Framing.delimiter(
+  val splitter: Flow[ByteString, ByteString, NotUsed] = Framing.delimiter(
     ByteString("\n"),
     maximumFrameLength = 1024,
     allowTruncation = true
   )
+
+
+  def getFile(filename: String): Option[S3Object] = {
+    try {
+      Some(s3client.getObject(new GetObjectRequest(config.bucket, config.folderName + "/" + filename)))
+    } catch {
+      case ex: AmazonClientException =>
+        logger.error(s"Couldn't fetch $filename from S3", ex)
+        None
+    }
+  }
+
+  def processFile[A](
+    filename: String,
+    func1: PartialFunction[String, A],
+    func2: Seq[A] => Future[Unit],
+    func3: => Future[Unit]
+  ): Future[Unit] = {
+    getFile(filename).map { file =>
+      val source: BufferedSource = IOSource.fromInputStream(file.getObjectContent)
+      val foo: Iterator[Future[Unit]] = source
+        .getLines()
+        .collect(func1)
+        .grouped(10000).map { x =>
+        func2(x)
+      }
+
+    }
+    ???
+  }
+
 
   def chunkFileDownload[A](
     filename: String,
