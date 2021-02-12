@@ -57,12 +57,12 @@ class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSyste
 
   def getFile(filename: String): Option[S3Object] = {
     try {
-      Some(s3client.getObject(new GetObjectRequest(config.bucket, config.folderName + "/" + filename)))
+      Some(s3client.getObject(new GetObjectRequest(config.bucket, filename)))
     } catch {
       case ex: AmazonClientException =>
         logger.error(s"Couldn't fetch $filename from S3", ex)
         None
-    }
+    } 
   }
 
   def processFile[A](
