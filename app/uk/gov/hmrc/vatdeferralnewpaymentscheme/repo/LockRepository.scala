@@ -71,7 +71,7 @@ class DefaultLockRepository @Inject()(
 
   private lazy val documentExistsErrorCode = Some(11000)
 
-  private val cacheTtl = 60 * 30 // TODO configure
+  private val cacheTtl = 60 * 60 // TODO configure
 
   private val index = Index(
     key     = Seq("lastUpdated" -> IndexType.Ascending),
@@ -81,7 +81,7 @@ class DefaultLockRepository @Inject()(
 
   override def indexes: Seq[Index] = Seq(index)
 
-  val ttl = runModeConfiguration.getInt("microservice.services.lock.ttl.minutes").getOrElse(10)
+  val ttl = runModeConfiguration.getInt("microservice.services.lock.ttl.minutes").getOrElse(60)
 
   override def lock(id: Int): Future[Boolean] = {
     collection.insert(true).one(Lock(id)).map{_ =>
