@@ -54,7 +54,6 @@ class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSyste
     allowTruncation = true
   )
 
-
   def getFile(filename: String): Option[S3Object] = {
     try {
       Some(s3client.getObject(new GetObjectRequest(config.bucket, filename)))
@@ -73,17 +72,14 @@ class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSyste
   ): Future[Unit] = {
     getFile(filename).map { file =>
       val source: BufferedSource = IOSource.fromInputStream(file.getObjectContent)
-      val foo: Iterator[Future[Unit]] = source
+      source
         .getLines()
         .collect(func1)
         .grouped(10000).map { x =>
         func2(x)
       }
-
-    }
-    ???
+    }.fold(throw new RuntimeException("unable to get file")){ _ => func3}
   }
-
 
   def chunkFileDownload[A](
     filename: String,
