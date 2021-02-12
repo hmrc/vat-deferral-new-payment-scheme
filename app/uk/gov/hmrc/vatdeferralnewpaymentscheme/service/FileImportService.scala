@@ -62,7 +62,7 @@ class FileImportService @Inject()(
     bulkInsert: (Seq[A]) => Future[Unit]
   ): Future[Unit] = {
 
-    logger.info(s"filename: $filename: Import file triggered with parameters: region:${config.region}, bucket:${config.bucket}")
+    logger.info(s"File Import: filename: $filename: Import file triggered with parameters: region:${config.region}, bucket:${config.bucket}")
 
     val amazonS3Connector = new AmazonS3Connector(config)
 
@@ -81,7 +81,7 @@ class FileImportService @Inject()(
 
                 withLock(1) {
 
-                  logger.info(s"filename: $filename: Import required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date: content length: ${s3Object.getObjectMetadata.getContentLength}")
+                  logger.info(s"File Import: filename: $filename: Import required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date: content length: ${s3Object.getObjectMetadata.getContentLength}")
 
                   amazonS3Connector
                     .chunkFileDownload(
@@ -97,12 +97,12 @@ class FileImportService @Inject()(
         }
       }
       else {
-        logger.warn(s"filename: $filename: File does not exist")
+        logger.warn(s"File Import: filename: $filename: File does not exist")
         Future.successful[Unit]()
       }
     } catch {
       case e => {
-        logger.error(s"filename: $filename: File import error: $e")
+        logger.error(s"File Import: filename: $filename: File import error: $e")
         Future.successful[Unit]()
       }
     }
@@ -114,7 +114,7 @@ class FileImportService @Inject()(
       TimeToPay(line.substring(2, 11))
     }
     else{
-      logger.info("Time to Pay String is invalid")
+      logger.info("File Import: Time to Pay String is invalid")
       TimeToPay("error") // TODO: Return an None
     }
   }

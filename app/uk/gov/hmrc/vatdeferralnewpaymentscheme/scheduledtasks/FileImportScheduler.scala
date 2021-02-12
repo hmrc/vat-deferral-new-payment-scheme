@@ -22,6 +22,8 @@ import akka.actor.ActorSystem
 import com.google.inject.{AbstractModule, Provides}
 import javax.inject.{Inject, Named, Singleton}
 import play.api.{Configuration, Environment, Logger}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.FileImportService
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -36,12 +38,12 @@ class FileImportScheduler @Inject() (
   val logger = Logger(getClass)
 
   if (enabled) {
-    logger.info(s"Initialising file import processing every $interval")
-    actorSystem.scheduler.schedule(FiniteDuration(10, TimeUnit.SECONDS), interval) {
+    logger.info(s"File Import: Initialising file import processing every $interval")
+    actorSystem.scheduler.schedule(FiniteDuration(5, TimeUnit.MINUTES), interval) {
       fileImportService.importS3File()
     }
   } else {
-    logger.info("File import is disabled")
+    logger.info("File Import: File import is disabled")
   }
 }
 

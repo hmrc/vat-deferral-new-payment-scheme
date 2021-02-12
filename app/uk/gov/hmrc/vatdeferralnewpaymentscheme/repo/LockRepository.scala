@@ -85,7 +85,7 @@ class DefaultLockRepository @Inject()(
 
   override def lock(id: Int): Future[Boolean] = {
     collection.insert(true).one(Lock(id)).map{_ =>
-      Logger.info(s"Locking with $id")
+      Logger.info(s"File Import: Locking with $id")
       true
     }.recover {
       case e: LastError if e.code == documentExistsErrorCode => {
@@ -97,7 +97,7 @@ class DefaultLockRepository @Inject()(
             }
           }
         }
-        Logger.info(s"Unable to lock with $id")
+        Logger.info(s"File Import: Unable to lock with $id")
         false
       }
     }
@@ -106,7 +106,7 @@ class DefaultLockRepository @Inject()(
   override def release(id: Int): Future[Unit] =
     collection.findAndRemove(BSONDocument("_id" -> id))
       .map{_=>
-        Logger.info(s"Releasing lock $id")
+        Logger.info(s"File Import: Releasing lock $id")
         ()
       }.fallbackTo(Future.successful(()))
 

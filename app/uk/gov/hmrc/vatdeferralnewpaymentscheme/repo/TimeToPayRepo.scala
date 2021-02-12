@@ -47,22 +47,23 @@ class MongoTimeToPayRepo @Inject() (reactiveMongoComponent: ReactiveMongoCompone
     with TimeToPayRepo {
 
   def addMany(timeToPay: Array[TimeToPay]): Future[Unit] = {
+    logger.info(s"File Import: addMany size of timeToPay: ${timeToPay.length}")
     mongo()
       .collection[JSONCollection]("fileImportTimeToPayTemp")
       .insert
       .many(timeToPay.filter(x => x.vrn != "error")).map { w =>
-      logger.info(s"Errors writing to fileImportTimeToPayTemp ${w.writeErrors}")
-      w.ok // this is a bool t/f but return type is unit regardless
+      if (w.writeErrors.nonEmpty) logger.info(s"File Import: Errors writing to fileImportTimeToPayTemp ${w.writeErrors}")
+      w.ok
     }
   }
 
   def renameCollection(): Future[Boolean] = {
     collection.db.connection.database("admin")
       .flatMap { adminDatabase =>
-        logger.info(s"Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
+        logger.info(s"File Import: Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
         adminDatabase.renameCollection(collection.db.name, "fileImportTimeToPayTemp", collection.name, true)
       }.map { renameResult: BSONCollection =>
-      logger.info(s"'${collection.name}' collection renamed operation finished, result: ${renameResult}")
+      logger.info(s"File Import: '${collection.name}' collection renamed operation finished, result: ${renameResult}")
       true
     }
   }
