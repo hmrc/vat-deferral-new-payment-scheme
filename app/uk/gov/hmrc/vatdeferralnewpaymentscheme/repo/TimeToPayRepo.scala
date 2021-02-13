@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.repo
 
+import java.util.concurrent.TimeUnit
+
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import akka.stream.{Materializer, OverflowStrategy}
@@ -32,6 +34,7 @@ import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.TimeToPay
 
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoTimeToPayRepo])
@@ -62,7 +65,11 @@ class MongoTimeToPayRepo @Inject() (
   def insertFlow[A](implicit writer: Writer[A]): Flow[Seq[A], MultiBulkWriteResult, NotUsed]  =
     Flow[Seq[A]]
       .buffer(2000, OverflowStrategy.backpressure)
-      .map(docs => tempCollection.insert(ordered = false).many[A](docs))
+      .throttle(10, FiniteDuration(1, TimeUnit.SECONDS))
+      .map { docs =>
+        logger.info(s"File Import: insert many with ${docs.size} docs")
+        tempCollection.insert(ordered = false).many[A](docs)
+      }
       .mapAsyncUnordered(8)(identity)
 
   def renameCollection(): Future[Boolean] = {
