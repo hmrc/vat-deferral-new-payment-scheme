@@ -61,9 +61,9 @@ class MongoTimeToPayRepo @Inject() (
 
   def insertFlow[A](implicit writer: Writer[A]): Flow[Seq[A], MultiBulkWriteResult, NotUsed]  =
     Flow[Seq[A]]
-      .buffer(2000, OverflowStrategy.backpressure) // TODO check buffer behaviour, could be "lossy"
+      .buffer(2000, OverflowStrategy.backpressure)
       .map(docs => tempCollection.insert(ordered = false).many[A](docs))
-      .mapAsyncUnordered(8)(identity) // TODO probably this number should be below the mongo connection limit (10?)
+      .mapAsyncUnordered(8)(identity)
 
   def renameCollection(): Future[Boolean] = {
     collection.db.connection.database("admin")
