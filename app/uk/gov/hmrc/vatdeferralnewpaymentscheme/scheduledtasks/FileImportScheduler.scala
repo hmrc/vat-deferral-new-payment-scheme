@@ -16,28 +16,44 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.scheduledtasks
 
-import java.util.concurrent.TimeUnit
-
 import akka.actor.ActorSystem
 import com.google.inject.{AbstractModule, Provides}
-import javax.inject.{Inject, Named, Singleton}
+import play.api.inject.DefaultApplicationLifecycle
 import play.api.{Configuration, Environment, Logger}
+import play.modules.reactivemongo.ReactiveMongoComponentImpl
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{DefaultLockRepository, MongoImportFile, MongoPaymentOnAccountRepo, MongoTimeToPayRepo}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.FileImportService
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.util.concurrent.TimeUnit
+import javax.inject.{Inject, Named, Singleton}
 import scala.concurrent.duration._
 
 class FileImportScheduler @Inject() (
   actorSystem: ActorSystem,
   @Named("payloadInterval") interval: FiniteDuration,
   @Named("fileImportEnabled") enabled: Boolean,
-  fileImportService: FileImportService) {
+  configuration: Configuration,
+  environment: Environment,
+  appConfig: AppConfig)(implicit system: ActorSystem) {
 
   val logger = Logger(getClass)
+  implicit val ec = system.dispatcher
+  implicit val materializer = akka.stream.ActorMaterializer()
 
   if (enabled) {
     logger.info(s"File Import: Initialising file import processing every $interval")
-    actorSystem.scheduler.schedule(FiniteDuration(120, TimeUnit.SECONDS), interval) {
+    actorSystem.scheduler.schedule(FiniteDuration(5, TimeUnit.MINUTES), interval) {
+
+      val lifecycle = new DefaultApplicationLifecycle()
+      val mongo = new ReactiveMongoComponentImpl(configuration, environment, lifecycle)
+      val ttpRepo = new MongoTimeToPayRepo(new ReactiveMongoComponentImpl(configuration, environment, lifecycle))
+      val poaRepo = new MongoPaymentOnAccountRepo(mongo)
+      val fileImportRepo = new MongoImportFile(mongo)
+      val locksRepo = new DefaultLockRepository(mongo, configuration)
+
+      val fileImportService = new FileImportService(ttpRepo, poaRepo, fileImportRepo, locksRepo, appConfig)
+
       fileImportService.importS3File()
     }
   } else {
