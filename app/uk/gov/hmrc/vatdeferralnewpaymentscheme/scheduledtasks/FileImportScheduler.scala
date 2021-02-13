@@ -37,7 +37,7 @@ class FileImportScheduler @Inject() (
 
   if (enabled) {
     logger.info(s"File Import: Initialising file import processing every $interval")
-    actorSystem.scheduler.schedule(FiniteDuration(30, TimeUnit.SECONDS), interval) {
+    actorSystem.scheduler.schedule(FiniteDuration(30, TimeUnit.MINUTES), interval) {
       fileImportService.importS3File()
     }
   } else {
@@ -57,7 +57,7 @@ class FileImportSchedulerModule(environment: Environment, val runModeConfigurati
     new FiniteDuration(
       runModeConfiguration
         .getOptional[Int]("microservice.services.schedulers.fileimport.interval.seconds")
-        .getOrElse(120)
+        .getOrElse(900)
         .toLong,
       TimeUnit.SECONDS
     )

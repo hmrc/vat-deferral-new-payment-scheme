@@ -72,7 +72,7 @@ class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSyste
       .map(_.utf8String.trim)
       .collect(lineToItem)
       .filter(itemFilter)
-      .grouped(25000) 
+      .grouped(25000)
       .via(mongoBulkInsertFlow)
 
     source.runForeach { x =>
