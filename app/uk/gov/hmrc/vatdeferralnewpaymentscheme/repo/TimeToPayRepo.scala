@@ -79,6 +79,7 @@ class MongoTimeToPayRepo @Inject() (
         adminDatabase.renameCollection(collection.db.name, "fileImportTimeToPayTemp", collection.name, true)
       }.map { renameResult: BSONCollection =>
       logger.info(s"File Import: '${collection.name}' collection renamed operation finished, result: ${renameResult}")
+      reactiveMongoComponent.mongoConnector.close()
       true
     }
   }

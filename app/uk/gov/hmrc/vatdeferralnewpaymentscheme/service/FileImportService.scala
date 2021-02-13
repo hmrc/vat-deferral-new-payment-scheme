@@ -41,7 +41,7 @@ class FileImportService @Inject()(
 
   val logger = Logger(getClass)
 
-  def importS3File(): Future[Unit]  = {
+  def importS3File(): Unit = {
       importFile[TimeToPay](
         config.ttpFilename,
         { case x => ParseTTPString(x) },

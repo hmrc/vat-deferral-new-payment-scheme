@@ -54,7 +54,8 @@ class FileImportScheduler @Inject() (
 
       val fileImportService = new FileImportService(ttpRepo, poaRepo, fileImportRepo, locksRepo, appConfig)
 
-      fileImportService.importS3File().onComplete(_ => { mongo.mongoConnector.close() })
+      fileImportService.importS3File()
+
     }
   } else {
     logger.info("File Import: File import is disabled")
