@@ -11,7 +11,8 @@ object AppDependencies {
     "com.amazonaws"           % "aws-java-sdk-s3"             % "1.11.915",
     "uk.gov.hmrc"             %% "stub-data-generator"        % "0.5.3",
     "org.typelevel"           %% "cats-core"                  % "2.1.1",
-    "com.gilt"                %% "gfc-aws-s3"                 % "0.1.0"
+    "com.gilt"                %% "gfc-aws-s3"                 % "0.1.0",
+    "com.chuusai"             %% "shapeless"                  % "2.3.3"
   )
 
   val test = Seq(

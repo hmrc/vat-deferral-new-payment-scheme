@@ -37,7 +37,7 @@ class FileImportScheduler @Inject() (
 
   if (enabled) {
     logger.info(s"File Import: Initialising file import processing every $interval")
-    actorSystem.scheduler.schedule(FiniteDuration(5, TimeUnit.MINUTES), interval) {
+    actorSystem.scheduler.schedule(FiniteDuration(30, TimeUnit.MINUTES), interval) {
       fileImportService.importS3File()
     }
   } else {

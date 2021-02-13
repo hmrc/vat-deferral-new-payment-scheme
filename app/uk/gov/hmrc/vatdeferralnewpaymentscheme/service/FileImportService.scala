@@ -49,14 +49,6 @@ class FileImportService @Inject()(
       )
   }
 
-//  def importS3File(): Unit = {
-//      importFile[TimeToPay](
-//        config.ttpFilename,
-//        { case x => ParseTTPString(x) },
-//        { fc => timeToPayRepo.addMany(fc.toArray) }
-//      )
-//  }
-
   def afterImport(
     s3FileLastModifiedDate: Date,
     filename: String
@@ -69,9 +61,8 @@ class FileImportService @Inject()(
 
   private def importFile[A](
     filename: String,
-    func1: PartialFunction[String, A],
-    insertFlow: Flow[Seq[A], MultiBulkWriteResult, NotUsed]//,
-//    bulkInsert: (Seq[A]) => Future[Unit] => Future[Unit]
+    lineToItem: PartialFunction[String, A],
+    mongoBulkInsertFlow: Flow[Seq[A], MultiBulkWriteResult, NotUsed]
   ): Future[Unit] = {
 
     logger.info(s"File Import: filename: $filename: Import file triggered with parameters: region:${config.region}, bucket:${config.bucket}")
@@ -98,9 +89,10 @@ class FileImportService @Inject()(
                   amazonS3Connector
                     .chunkFileDownload(
                       filename,
-                      func1,
+                      lineToItem,
+                      mongoBulkInsertFlow,
                       afterImport(s3FileLastModifiedDate, filename),
-                      insertFlow
+                      ttpFilter
                     )
                 }
               }
@@ -129,6 +121,14 @@ class FileImportService @Inject()(
       logger.info("File Import: Time to Pay String is invalid")
       TimeToPay("error") // TODO: Return an None
     }
+  }
+
+  def ttpFilter[A](item: A): Boolean = {
+    import shapeless.syntax.typeable._
+    item.cast[TimeToPay]
+      .fold(
+        throw new RuntimeException("FileImport: unable to cast item as TimeToPay")
+      )(ttp => ttp.vrn != "error")
   }
 
   private def withLock(id: Int)(f: => Future[Unit]): Future[Unit] = {
