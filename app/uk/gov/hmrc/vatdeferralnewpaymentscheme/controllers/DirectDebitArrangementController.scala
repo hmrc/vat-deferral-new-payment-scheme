@@ -176,7 +176,6 @@ class DirectDebitArrangementController @Inject()(
               // n.b. we fail silently as there is a manual intervention to fix user state
               Created
             case (Left(UpstreamErrorResponse(message, status, _, _)), _) =>
-              paymentPlanStore.add(vrn)
               logger.warn(s"$status unable to set up direct debit payment plan, not setting up arrangement: $message")
               auditConnector.sendExplicitAudit(
                 "CreatePaymentPlanFailure",
