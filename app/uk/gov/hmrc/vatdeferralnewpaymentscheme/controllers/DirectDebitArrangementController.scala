@@ -145,7 +145,8 @@ class DirectDebitArrangementController @Inject()(
           dd.toList)
 
         val formatter = java.text.NumberFormat.getCurrencyInstance(UK)
-        val letterAndControl = LetterAndControl(totalAll = formatter.format(totalAmountToPay))
+        val totalAll = ddar.totalAmountToPay.setScale(2)
+        val letterAndControl = LetterAndControl(totalAll = totalAll.toString)
 
         for {
           a <- desDirectDebitConnector.createPaymentPlan(paymentPlanRequest, vrn)
