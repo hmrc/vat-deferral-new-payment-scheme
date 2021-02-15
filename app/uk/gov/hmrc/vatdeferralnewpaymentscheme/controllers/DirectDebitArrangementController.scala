@@ -28,12 +28,11 @@ import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesDirectDebitConnector, DesTimeToPayArrangementConnector}
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.DirectDebitArrangementRequest
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.{DirectDebitArrangementRequest, TtpArrangementAuditWrapper}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.DirectDebitGenService
-import java.util.Locale.UK
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.math.BigDecimal.RoundingMode
@@ -144,7 +143,6 @@ class DirectDebitArrangementController @Inject()(
           directDebit = true,
           dd.toList)
 
-        val formatter = java.text.NumberFormat.getCurrencyInstance(UK)
         val totalAll = ddar.totalAmountToPay.setScale(2)
         val letterAndControl = LetterAndControl(totalAll = totalAll.toString)
 

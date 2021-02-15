@@ -35,7 +35,7 @@ class PaymentPlanController @Inject()(
 )(implicit ec: ExecutionContext) extends BackendController(cc) {
   val logger = Logger(getClass)
 
-  def get(vrn: String): Action[AnyContent] = Action.async { implicit request =>
+  def get(vrn: String): Action[AnyContent] = Action.async {
     paymentPlanService.exists(vrn).map { exists => {
       if (exists) {
         logger.info("vrn exists in PaymentPlanService")

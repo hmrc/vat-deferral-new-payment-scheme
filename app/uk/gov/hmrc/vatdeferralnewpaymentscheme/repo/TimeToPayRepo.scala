@@ -18,7 +18,6 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.repo
 
 import cats.implicits._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.Logger
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.indexes.{Index, IndexType}
@@ -31,14 +30,17 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.TimeToPay
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoTimeToPayRepo])
-trait TimeToPayRepo {
-  def addMany(timeToPay: Array[TimeToPay]): Future[Unit]
+trait TimeToPayRepo extends BulkInsertFlow {
   def exists(vrn: String): Future[Boolean]
   def renameCollection(): Future[Boolean]
 }
 
 @Singleton
-class MongoTimeToPayRepo @Inject() (reactiveMongoComponent: ReactiveMongoComponent)(implicit ec: ExecutionContext)
+class MongoTimeToPayRepo @Inject() (
+  reactiveMongoComponent: ReactiveMongoComponent
+)(
+  implicit ec: ExecutionContext
+)
   extends ReactiveRepository[TimeToPay, BSONObjectID] (
     collectionName = "fileImportTimeToPay",
     mongo          = reactiveMongoComponent.mongoConnector.db,
@@ -46,20 +48,17 @@ class MongoTimeToPayRepo @Inject() (reactiveMongoComponent: ReactiveMongoCompone
     ReactiveMongoFormats.objectIdFormats)
     with TimeToPayRepo {
 
-  def addMany(timeToPay: Array[TimeToPay]): Future[Unit] = {
+  val tempCollection: JSONCollection =
     mongo()
       .collection[JSONCollection]("fileImportTimeToPayTemp")
-      .insert
-      .many(timeToPay.filter(x => x.vrn != "error")).map(_.ok)
-  }
 
   def renameCollection(): Future[Boolean] = {
     collection.db.connection.database("admin")
       .flatMap { adminDatabase =>
-        logger.debug(s"Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
+        logger.info(s"File Import: Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
         adminDatabase.renameCollection(collection.db.name, "fileImportTimeToPayTemp", collection.name, true)
       }.map { renameResult: BSONCollection =>
-      logger.debug(s"'${collection.name}' collection renamed operation finished, result: ${renameResult}")
+      logger.info(s"File Import: '${collection.name}' collection renamed operation finished, result: ${renameResult}")
       true
     }
   }

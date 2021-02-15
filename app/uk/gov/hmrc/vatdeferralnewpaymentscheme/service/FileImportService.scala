@@ -16,11 +16,13 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 
-import akka.actor.ActorSystem
-
 import java.util.Date
+
+import akka.NotUsed
+import akka.stream.scaladsl.Flow
 import javax.inject.Inject
 import play.api.Logger
+import reactivemongo.api.commands.MultiBulkWriteResult
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.AmazonS3Connector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.TimeToPay
@@ -34,16 +36,19 @@ class FileImportService @Inject()(
    fileImportRepo: ImportFileRepo,
    lockRepository: LockRepository,
    config: AppConfig
- )(implicit ec: ExecutionContext, system: ActorSystem) {
+ )(implicit ec: ExecutionContext) {
 
   val logger = Logger(getClass)
 
   def importS3File(): Unit = {
       importFile[TimeToPay](
         config.ttpFilename,
+        1,
         { case x => ParseTTPString(x) },
-        { fc => timeToPayRepo.addMany(fc.toArray) }
+        { timeToPayRepo.insertFlow},
+        ttpFilter
       )
+      // TODO add other importFile calls
   }
 
   def afterImport(
@@ -58,11 +63,13 @@ class FileImportService @Inject()(
 
   private def importFile[A](
     filename: String,
-    func1: PartialFunction[String, A],
-    bulkInsert: (Seq[A]) => Future[Unit]
+    lockId: Int,
+    lineToItem: PartialFunction[String, A],
+    mongoBulkInsertFlow: Flow[Seq[A], MultiBulkWriteResult, NotUsed],
+    itemFilter: A => Boolean = {_:A => false}
   ): Future[Unit] = {
 
-    logger.info(s"filename: $filename: Import file triggered with parameters: region:${config.region}, bucket:${config.bucket}")
+    logger.info(s"File Import: filename: $filename: Import file triggered with parameters: region:${config.region}, bucket:${config.bucket}")
 
     val amazonS3Connector = new AmazonS3Connector(config)
 
@@ -79,16 +86,17 @@ class FileImportService @Inject()(
               case Some(date) if !s3FileLastModifiedDate.after(date) => logger.info(s"filename: $filename: Import not required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date ")
               case date => {
 
-                withLock(1) {
+                withLock(lockId) {
 
-                  logger.info(s"filename: $filename: Import required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date: content length: ${s3Object.getObjectMetadata.getContentLength}")
+                  logger.info(s"File Import: filename: $filename: Import required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date: content length: ${s3Object.getObjectMetadata.getContentLength}")
 
                   amazonS3Connector
                     .chunkFileDownload(
                       filename,
-                      func1,
-                      bulkInsert,
-                      afterImport(s3FileLastModifiedDate, filename)
+                      lineToItem,
+                      mongoBulkInsertFlow,
+                      afterImport(s3FileLastModifiedDate, filename),
+                      itemFilter
                     )
                 }
               }
@@ -97,12 +105,12 @@ class FileImportService @Inject()(
         }
       }
       else {
-        logger.warn(s"filename: $filename: File does not exist")
+        logger.warn(s"File Import: filename: $filename: File does not exist")
         Future.successful[Unit]()
       }
     } catch {
-      case e => {
-        logger.error(s"filename: $filename: File import error: $e")
+      case e:Throwable => {
+        logger.error(s"File Import: filename: $filename: File import error: $e")
         Future.successful[Unit]()
       }
     }
@@ -114,9 +122,17 @@ class FileImportService @Inject()(
       TimeToPay(line.substring(2, 11))
     }
     else{
-      logger.info("Time to Pay String is invalid")
+      logger.info("File Import: Time to Pay String is invalid")
       TimeToPay("error") // TODO: Return an None
     }
+  }
+
+  def ttpFilter[A](item: A): Boolean = {
+    import shapeless.syntax.typeable._
+    item.cast[TimeToPay]
+      .fold(
+        throw new RuntimeException("FileImport: unable to cast item as TimeToPay")
+      )(ttp => ttp.vrn != "error")
   }
 
   private def withLock(id: Int)(f: => Future[Unit]): Future[Unit] = {

@@ -14,30 +14,17 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.vatdeferralnewpaymentscheme
+package uk.gov.hmrc.vatdeferralnewpaymentscheme.model
 
-import play.api.libs.json.Writes
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.audit.http.connector.AuditConnector
+import play.api.libs.json.Json
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement.{LetterAndControl, TtpArrangement}
 
-import scala.concurrent.ExecutionContext
-
-package object controllers {
-
-  def audit[T](
-    auditType: String,
-    result: T
-  )(
-    implicit headerCarrier: HeaderCarrier,
-    auditConnector: AuditConnector,
-    ec: ExecutionContext,
-    writes: Writes[T]
-  ): Unit = {
-    import play.api.libs.json.Json
-    auditConnector.sendExplicitAudit(
-      auditType,
-      Json.toJson(result)(writes)
-    )
-  }
-
+case class TtpArrangementAuditWrapper(
+  vrn: String,
+  timeToPayArrangement: TtpArrangement,
+  letterAndControl: LetterAndControl
+)
+object TtpArrangementAuditWrapper {
+  implicit val format = Json.format[TtpArrangementAuditWrapper]
 }
+

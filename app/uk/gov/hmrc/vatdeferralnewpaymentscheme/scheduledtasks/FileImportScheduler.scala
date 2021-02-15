@@ -36,12 +36,13 @@ class FileImportScheduler @Inject() (
   val logger = Logger(getClass)
 
   if (enabled) {
-    logger.info(s"Initialising file import processing every $interval")
-    actorSystem.scheduler.schedule(FiniteDuration(10, TimeUnit.SECONDS), interval) {
+    logger.info(s"File Import: Initialising file import processing every $interval")
+    actorSystem.scheduler.schedule(FiniteDuration(30, TimeUnit.MINUTES), interval) {
       fileImportService.importS3File()
+
     }
   } else {
-    logger.info("File import is disabled")
+    logger.info("File Import: File import is disabled")
   }
 }
 

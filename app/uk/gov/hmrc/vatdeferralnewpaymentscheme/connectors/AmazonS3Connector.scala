@@ -16,21 +16,29 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors
 
+import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{Framing, Sink, Source}
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Flow, Framing, Source}
 import akka.util.ByteString
 import com.amazonaws.services.s3.model.S3Object
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.gilt.gfc.aws.s3.akka.S3DownloaderSource._
 import javax.inject.Inject
+import play.api.Logger
+import reactivemongo.api.commands.MultiBulkWriteResult
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
-class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSystem) {
+class AmazonS3Connector @Inject()(config: AppConfig) {
 
-  implicit val ec = system.dispatcher
-  implicit val materializer = akka.stream.ActorMaterializer()
+  val logger = Logger(getClass)
+
+  implicit val system: ActorSystem = ActorSystem("S3")
+
+  implicit val ec: ExecutionContextExecutor = system.dispatcher
+  implicit val materializer: ActorMaterializer = akka.stream.ActorMaterializer()
 
   private lazy val s3client: AmazonS3 = {
     val builder = AmazonS3ClientBuilder
@@ -41,7 +49,7 @@ class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSyste
     builder.build()
   }
 
-  val splitter = Framing.delimiter(
+  val splitter: Flow[ByteString, ByteString, NotUsed] = Framing.delimiter(
     ByteString("\n"),
     maximumFrameLength = 1024,
     allowTruncation = true
@@ -49,9 +57,10 @@ class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSyste
 
   def chunkFileDownload[A](
     filename: String,
-    func1: PartialFunction[String, A],
-    func2: Seq[A] => Future[Unit],
-    func3: => Future[Unit]
+    lineToItem: PartialFunction[String, A],
+    mongoBulkInsertFlow: Flow[Seq[A], MultiBulkWriteResult, NotUsed],
+    postProcess: => Future[Unit],
+    itemFilter: A => Boolean
   ): Future[Unit] = {
     val chunkSize = 1024 * 1024 // 1 Mb chunks to request from S3
     val memoryBufferSize = 128 * 1024 // 128 Kb buffer
@@ -64,14 +73,16 @@ class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSyste
       memoryBufferSize
     ).via(splitter)
       .map(_.utf8String.trim)
-      .collect(func1)
-      .grouped(10000)
+      .collect(lineToItem)
+      .filter(itemFilter)
+      .grouped(2000)
+      .via(mongoBulkInsertFlow)
 
-    source.runWith(Sink.foldAsync() {
-      case (acc, x) =>
-        func2(x)
-    }).map {_=>
-      func3
+    source.runForeach { x =>
+      if (x.writeErrors.nonEmpty) logger.warn(s"File Import: Errors writing chunk to db: ${x.writeErrors}")
+      else logger.info(s"File Import: success writing chunk to db, chunk size: ${x.totalN}")
+    }.map { _ =>
+      postProcess
     }
   }
 
