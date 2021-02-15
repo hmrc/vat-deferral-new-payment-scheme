@@ -14,30 +14,25 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.vatdeferralnewpaymentscheme
+package uk.gov.hmrc.vatdeferralnewpaymentscheme.repo
 
-import play.api.libs.json.Writes
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.audit.http.connector.AuditConnector
+import akka.NotUsed
+import akka.stream.scaladsl.Flow
+import reactivemongo.api.commands.MultiBulkWriteResult
+import reactivemongo.play.json.JSONSerializationPack.Writer
+import reactivemongo.play.json.collection.JSONCollection
 
 import scala.concurrent.ExecutionContext
 
-package object controllers {
+trait BulkInsertFlow {
 
-  def audit[T](
-    auditType: String,
-    result: T
-  )(
-    implicit headerCarrier: HeaderCarrier,
-    auditConnector: AuditConnector,
-    ec: ExecutionContext,
-    writes: Writes[T]
-  ): Unit = {
-    import play.api.libs.json.Json
-    auditConnector.sendExplicitAudit(
-      auditType,
-      Json.toJson(result)(writes)
-    )
-  }
+  val tempCollection: JSONCollection
+
+  def insertFlow[A](
+    implicit ec: ExecutionContext,
+    writer: Writer[A]
+  ): Flow[Seq[A], MultiBulkWriteResult, NotUsed] =
+    Flow[Seq[A]]
+      .mapAsyncUnordered(8)(docs => tempCollection.insert(ordered = false).many[A](docs))
 
 }

@@ -30,9 +30,11 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 
 import scala.concurrent.Future
 
-class AmazonS3Connector @Inject()(config: AppConfig)(implicit system: ActorSystem) {
+class AmazonS3Connector @Inject()(config: AppConfig) {
 
   val logger = Logger(getClass)
+
+  implicit val system: ActorSystem = ActorSystem("S3")
 
   implicit val ec = system.dispatcher
   implicit val materializer = akka.stream.ActorMaterializer()

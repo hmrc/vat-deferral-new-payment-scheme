@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 
-import akka.actor.ActorSystem
 import java.util.Date
 
 import akka.NotUsed
@@ -37,7 +36,7 @@ class FileImportService @Inject()(
    fileImportRepo: ImportFileRepo,
    lockRepository: LockRepository,
    config: AppConfig
- )(implicit ec: ExecutionContext, system: ActorSystem) {
+ )(implicit ec: ExecutionContext) {
 
   val logger = Logger(getClass)
 
@@ -47,6 +46,7 @@ class FileImportService @Inject()(
         { case x => ParseTTPString(x) },
         { timeToPayRepo.insertFlow}
       )
+      // TODO add other importFile calls
   }
 
   def afterImport(
@@ -62,7 +62,7 @@ class FileImportService @Inject()(
   private def importFile[A](
     filename: String,
     lineToItem: PartialFunction[String, A],
-    mongoBulkInsertFlow: Flow[Seq[A], MultiBulkWriteResult, NotUsed]
+    mongoBulkInsertFlow: Flow[Seq[A], MultiBulkWriteResult, NotUsed] // TODO pass in lock and filter
   ): Future[Unit] = {
 
     logger.info(s"File Import: filename: $filename: Import file triggered with parameters: region:${config.region}, bucket:${config.bucket}")
@@ -105,7 +105,7 @@ class FileImportService @Inject()(
         Future.successful[Unit]()
       }
     } catch {
-      case e => {
+      case e:Throwable => {
         logger.error(s"File Import: filename: $filename: File import error: $e")
         Future.successful[Unit]()
       }

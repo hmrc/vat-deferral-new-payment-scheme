@@ -20,7 +20,6 @@ import java.util.Date
 
 import cats.implicits._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.Logger
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}

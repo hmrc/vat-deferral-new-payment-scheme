@@ -38,7 +38,7 @@ class FinancialDataController @Inject()(
 
   val logger = Logger(getClass)
 
-  def get(vrn: String): Action[AnyContent] = Action.async { implicit request =>
+  def get(vrn: String): Action[AnyContent] = Action.async {
     for {
       financialData <- financialDataService.getFinancialData(vrn)
     } yield {

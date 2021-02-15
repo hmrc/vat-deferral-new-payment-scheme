@@ -47,7 +47,7 @@ class EligibilityController @Inject()(
   val logger = Logger(getClass)
   val nof: Future[Boolean] = Future.successful(false)
 
-  def get(vrn: String): Action[AnyContent] = Action.async { implicit request =>
+  def get(vrn: String): Action[AnyContent] = Action.async {
     (for {
       a <- paymentPlanStore.exists(vrn)
       b <- if (a) nof else paymentOnAccountRepo.exists(vrn)

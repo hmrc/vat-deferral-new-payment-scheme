@@ -17,17 +17,16 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.repo
 
 import java.time.{Instant, LocalDateTime, ZoneOffset}
-import cats.data.OptionT
-import cats.implicits._
-import com.google.inject.ImplementedBy
 
+import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Singleton}
-import play.api.{Configuration, Logger}
+import play.api.Configuration
 import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
+import reactivemongo.api.WriteConcern
 import reactivemongo.api.commands.LastError
 import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import reactivemongo.bson.BSONDocument
 import reactivemongo.play.json.ImplicitBSONHandlers.{JsObjectDocumentWriter => _, _}
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.FileDetails
@@ -81,11 +80,11 @@ class DefaultLockRepository @Inject()(
 
   override def indexes: Seq[Index] = Seq(index)
 
-  val ttl = runModeConfiguration.getInt("microservice.services.lock.ttl.minutes").getOrElse(60)
+  val ttl = runModeConfiguration.getOptional[Int]("microservice.services.lock.ttl.minutes").getOrElse(60)
 
   override def lock(id: Int): Future[Boolean] = {
     collection.insert(true).one(Lock(id)).map{_ =>
-      Logger.info(s"File Import: Locking with $id")
+      logger.info(s"File Import: Locking with $id")
       true
     }.recover {
       case e: LastError if e.code == documentExistsErrorCode => {
@@ -97,16 +96,24 @@ class DefaultLockRepository @Inject()(
             }
           }
         }
-        Logger.info(s"File Import: Unable to lock with $id")
+        logger.info(s"File Import: Unable to lock with $id")
         false
       }
     }
   }
 
   override def release(id: Int): Future[Unit] =
-    collection.findAndRemove(BSONDocument("_id" -> id))
-      .map{_=>
-        Logger.info(s"File Import: Releasing lock $id")
+
+    collection.findAndRemove(
+      BSONDocument("_id" -> id),
+      sort = None,
+      fields = None,
+      writeConcern = WriteConcern.Acknowledged,
+      maxTime = None,
+      collation = None,
+      arrayFilters = Seq()
+    ).map{_=>
+        logger.info(s"File Import: Releasing lock $id")
         ()
       }.fallbackTo(Future.successful(()))
 

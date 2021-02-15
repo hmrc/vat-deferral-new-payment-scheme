@@ -19,7 +19,6 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 import cats.Monoid.combineAll
 import cats.implicits._
 import javax.inject.Inject
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.DesConnector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.financialdata.TransactionPair
@@ -43,7 +42,7 @@ class FinancialDataService @Inject()(
       TransactionPair(Some("4700"),Some("1174"))
     )
 
-  def getFinancialData(vrn: String)(implicit hc: HeaderCarrier): Future[(BigDecimal, BigDecimal)] = {
+  def getFinancialData(vrn: String): Future[(BigDecimal, BigDecimal)] = {
 
     for {
       financialData <- desConnector.getFinancialData(vrn)

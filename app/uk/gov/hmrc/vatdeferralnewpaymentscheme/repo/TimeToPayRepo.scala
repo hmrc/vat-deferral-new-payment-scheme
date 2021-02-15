@@ -16,40 +16,30 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.repo
 
-import java.util.concurrent.TimeUnit
-
-import akka.NotUsed
-import akka.stream.scaladsl.Flow
-import akka.stream.{Materializer, OverflowStrategy}
 import cats.implicits._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.api.commands.MultiBulkWriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.JSONSerializationPack.Writer
 import reactivemongo.play.json.collection.JSONCollection
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.TimeToPay
 
-import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoTimeToPayRepo])
-trait TimeToPayRepo {
+trait TimeToPayRepo extends BulkInsertFlow {
   def exists(vrn: String): Future[Boolean]
   def renameCollection(): Future[Boolean]
-  def insertFlow[A](implicit writer: Writer[A]): Flow[Seq[A], MultiBulkWriteResult, NotUsed]
 }
 
 @Singleton
 class MongoTimeToPayRepo @Inject() (
   reactiveMongoComponent: ReactiveMongoComponent
 )(
-  implicit ec: ExecutionContext,
-  mat: Materializer
+  implicit ec: ExecutionContext
 )
   extends ReactiveRepository[TimeToPay, BSONObjectID] (
     collectionName = "fileImportTimeToPay",
@@ -61,16 +51,6 @@ class MongoTimeToPayRepo @Inject() (
   val tempCollection: JSONCollection =
     mongo()
       .collection[JSONCollection]("fileImportTimeToPayTemp")
-
-  def insertFlow[A](implicit writer: Writer[A]): Flow[Seq[A], MultiBulkWriteResult, NotUsed]  =
-    Flow[Seq[A]]
-      .buffer(2000, OverflowStrategy.backpressure)
-      .throttle(10, FiniteDuration(1, TimeUnit.SECONDS))
-      .map { docs =>
-        logger.info(s"File Import: insert many with ${docs.size} docs")
-        tempCollection.insert(ordered = false).many[A](docs)
-      }
-      .mapAsyncUnordered(8)(identity)
 
   def renameCollection(): Future[Boolean] = {
     collection.db.connection.database("admin")
