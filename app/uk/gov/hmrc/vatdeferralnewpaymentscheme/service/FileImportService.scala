@@ -43,8 +43,10 @@ class FileImportService @Inject()(
   def importS3File(): Unit = {
       importFile[TimeToPay](
         config.ttpFilename,
+        1,
         { case x => ParseTTPString(x) },
-        { timeToPayRepo.insertFlow}
+        { timeToPayRepo.insertFlow},
+        ttpFilter
       )
       // TODO add other importFile calls
   }
@@ -61,8 +63,10 @@ class FileImportService @Inject()(
 
   private def importFile[A](
     filename: String,
+    lockId: Int,
     lineToItem: PartialFunction[String, A],
-    mongoBulkInsertFlow: Flow[Seq[A], MultiBulkWriteResult, NotUsed] // TODO pass in lock and filter
+    mongoBulkInsertFlow: Flow[Seq[A], MultiBulkWriteResult, NotUsed],
+    itemFilter: A => Boolean = {_:A => false}
   ): Future[Unit] = {
 
     logger.info(s"File Import: filename: $filename: Import file triggered with parameters: region:${config.region}, bucket:${config.bucket}")
@@ -82,7 +86,7 @@ class FileImportService @Inject()(
               case Some(date) if !s3FileLastModifiedDate.after(date) => logger.info(s"filename: $filename: Import not required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date ")
               case date => {
 
-                withLock(1) {
+                withLock(lockId) {
 
                   logger.info(s"File Import: filename: $filename: Import required: s3 file last modified date: $s3FileLastModifiedDate: mongo last modified: $date: content length: ${s3Object.getObjectMetadata.getContentLength}")
 
@@ -92,7 +96,7 @@ class FileImportService @Inject()(
                       lineToItem,
                       mongoBulkInsertFlow,
                       afterImport(s3FileLastModifiedDate, filename),
-                      ttpFilter
+                      itemFilter
                     )
                 }
               }

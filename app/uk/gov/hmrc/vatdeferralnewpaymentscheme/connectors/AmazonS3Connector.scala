@@ -18,6 +18,7 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors
 
 import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Framing, Source}
 import akka.util.ByteString
 import com.amazonaws.services.s3.model.S3Object
@@ -28,7 +29,7 @@ import play.api.Logger
 import reactivemongo.api.commands.MultiBulkWriteResult
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 class AmazonS3Connector @Inject()(config: AppConfig) {
 
@@ -36,8 +37,8 @@ class AmazonS3Connector @Inject()(config: AppConfig) {
 
   implicit val system: ActorSystem = ActorSystem("S3")
 
-  implicit val ec = system.dispatcher
-  implicit val materializer = akka.stream.ActorMaterializer()
+  implicit val ec: ExecutionContextExecutor = system.dispatcher
+  implicit val materializer: ActorMaterializer = akka.stream.ActorMaterializer()
 
   private lazy val s3client: AmazonS3 = {
     val builder = AmazonS3ClientBuilder
@@ -59,7 +60,7 @@ class AmazonS3Connector @Inject()(config: AppConfig) {
     lineToItem: PartialFunction[String, A],
     mongoBulkInsertFlow: Flow[Seq[A], MultiBulkWriteResult, NotUsed],
     postProcess: => Future[Unit],
-    itemFilter: A => Boolean = {_:A => false}
+    itemFilter: A => Boolean
   ): Future[Unit] = {
     val chunkSize = 1024 * 1024 // 1 Mb chunks to request from S3
     val memoryBufferSize = 128 * 1024 // 128 Kb buffer
@@ -74,7 +75,7 @@ class AmazonS3Connector @Inject()(config: AppConfig) {
       .map(_.utf8String.trim)
       .collect(lineToItem)
       .filter(itemFilter)
-      .grouped(2000) // TODO extract config
+      .grouped(2000)
       .via(mongoBulkInsertFlow)
 
     source.runForeach { x =>
