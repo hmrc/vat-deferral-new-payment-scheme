@@ -143,9 +143,12 @@ class DirectDebitArrangementController @Inject()(
           directDebit = true,
           dd.toList)
 
+        val formatter = java.text.NumberFormat.getCurrencyInstance
+        val letterAndControl = LetterAndControl(totalAll = formatter.format(totalAmountToPay))
+
         for {
           a <- desDirectDebitConnector.createPaymentPlan(paymentPlanRequest, vrn)
-          arrangement = TimeToPayArrangementRequest(ttpArrangement)
+          arrangement = TimeToPayArrangementRequest(ttpArrangement, letterAndControl)
           b <- if (a.isRight) desTimeToPayArrangementConnector.createArrangement(vrn, arrangement)
                else Future.successful(Left(UpstreamErrorResponse("fake error", 418)))
         } yield {
