@@ -27,7 +27,8 @@ class FakeDesDirectDebitConnector(seed: Int) extends DesDirectDebitConnector {
   override def createPaymentPlan(request: PaymentPlanRequest, credentialId: String): Future[Either[UpstreamErrorResponse,PaymentPlanReference]] = seed match {
     case 201 =>
       Future.successful(Right(PaymentPlanReference("foo","bar", Seq(DdiReference("foo")), Seq(PpReference("bar")))))
-    case 400 => ??? // TODO not sure this is possible to test without changing the return type, possibly to an Either[FailureResponse,PaymentPlanReference]
+    case 400 =>
+      Future.successful(Left(UpstreamErrorResponse("foo", 400)))
     case 404 => ???
     case 500 => ???
     case 203 => ???

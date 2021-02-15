@@ -17,11 +17,12 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.model
 
 import play.api.libs.json.Json
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement.TtpArrangement
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement.{LetterAndControl, TtpArrangement}
 
 case class TtpArrangementAuditWrapper(
   vrn: String,
-  timeToPayArrangement: TtpArrangement
+  timeToPayArrangement: TtpArrangement,
+  letterAndControl: LetterAndControl
 )
 object TtpArrangementAuditWrapper {
   implicit val format = Json.format[TtpArrangementAuditWrapper]

@@ -34,7 +34,7 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.DirectDebitGenService
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.math.BigDecimal.RoundingMode
 
 @Singleton()
@@ -64,7 +64,7 @@ class DirectDebitArrangementController @Inject()(
     val today = if (now.isAfter(serviceStart)) now else serviceStart
     today match {
       case d if d.getDayOfMonth >= 15 && d.getDayOfMonth <= 22 && d.getMonthValue == 2 =>
-        d.withDayOfMonth(3).withMonth(3)
+        d.withDayOfMonth(1).withMonth(3)
       case d if d.plusDays(5).getDayOfWeek.getValue <= 5 =>
         d.plusDays(5)
       case d if d.plusDays(5).getDayOfWeek.getValue == 6 =>
@@ -143,10 +143,14 @@ class DirectDebitArrangementController @Inject()(
           directDebit = true,
           dd.toList)
 
+        val totalAll = ddar.totalAmountToPay.setScale(2)
+        val letterAndControl = LetterAndControl(totalAll = totalAll.toString)
+
         for {
           a <- desDirectDebitConnector.createPaymentPlan(paymentPlanRequest, vrn)
-          arrangement = TimeToPayArrangementRequest(ttpArrangement)
-          b <- desTimeToPayArrangementConnector.createArrangement(vrn, arrangement)
+          arrangement = TimeToPayArrangementRequest(ttpArrangement, letterAndControl)
+          b <- if (a.isRight) desTimeToPayArrangementConnector.createArrangement(vrn, arrangement)
+               else Future.successful(Left(UpstreamErrorResponse("fake error", 418)))
         } yield {
           (a,b) match {
             case (Right(ppr:PaymentPlanReference), Right(y)) if y.status == 202 =>
@@ -157,7 +161,11 @@ class DirectDebitArrangementController @Inject()(
               )
               audit[TtpArrangementAuditWrapper](
                 "CreateArrangementSuccess",
-                TtpArrangementAuditWrapper(vrn,ttpArrangement)
+                TtpArrangementAuditWrapper(
+                  vrn,
+                  ttpArrangement,
+                  letterAndControl
+                )
               )
               logger.info("createPaymentPlan and createArrangement has been successful")
               Created
@@ -170,28 +178,16 @@ class DirectDebitArrangementController @Inject()(
               )
               audit[TtpArrangementAuditWrapper](
                 "CreateArrangementFailure",
-                TtpArrangementAuditWrapper(vrn,ttpArrangement)
+                TtpArrangementAuditWrapper(
+                  vrn,
+                  ttpArrangement,
+                  letterAndControl
+                )
               )
               // n.b. we fail silently as there is a manual intervention to fix user state
               Created
-            case (Left(UpstreamErrorResponse(message, status, _, _)), Right(y)) =>
-              paymentPlanStore.add(vrn)
-              auditConnector.sendExplicitAudit(
-                "CreatePaymentPlanFailure",
-                Map(
-                  "status" -> status.toString,
-                  "message" -> message
-                )
-              )
-              audit[TtpArrangementAuditWrapper](
-                "CreateArrangementSuccess",
-                TtpArrangementAuditWrapper(vrn,ttpArrangement)
-              )
-              logger.warn(s"$status unable to set up direct debit payment plan but arrangement succeeded: $message")
-              Created
             case (Left(UpstreamErrorResponse(message, status, _, _)), _) =>
-              paymentPlanStore.add(vrn)
-              logger.warn(s"$status unable to set up direct debit payment plan & arrangement: $message")
+              logger.warn(s"$status unable to set up direct debit payment plan, not setting up arrangement: $message")
               auditConnector.sendExplicitAudit(
                 "CreatePaymentPlanFailure",
                 Map(
@@ -201,9 +197,13 @@ class DirectDebitArrangementController @Inject()(
               )
               audit[TtpArrangementAuditWrapper](
                 "CreateArrangementFailure",
-                TtpArrangementAuditWrapper(vrn,ttpArrangement)
+                TtpArrangementAuditWrapper(
+                  vrn,
+                  ttpArrangement,
+                  letterAndControl
+                )
               )
-              Created
+              NotAcceptable
           }
         }
       }

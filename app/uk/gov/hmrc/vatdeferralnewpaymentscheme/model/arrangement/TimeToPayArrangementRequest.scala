@@ -18,8 +18,20 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement
 
 import play.api.libs.json.Json
 
-case class TimeToPayArrangementRequest(ttpArrangement: TtpArrangement)
+case class LetterAndControl(
+  totalAll: String
+)
+
+object LetterAndControl {
+  implicit val format = Json.format[LetterAndControl]
+}
+
+case class TimeToPayArrangementRequest(
+  ttpArrangement: TtpArrangement,
+  letterAndControl: LetterAndControl
+)
 
 object TimeToPayArrangementRequest {
   implicit val format = Json.format[TimeToPayArrangementRequest]
 }
+
