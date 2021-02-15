@@ -161,7 +161,11 @@ class DirectDebitArrangementController @Inject()(
               )
               audit[TtpArrangementAuditWrapper](
                 "CreateArrangementSuccess",
-                TtpArrangementAuditWrapper(vrn,ttpArrangement)
+                TtpArrangementAuditWrapper(
+                  vrn,
+                  ttpArrangement,
+                  letterAndControl
+                )
               )
               logger.info("createPaymentPlan and createArrangement has been successful")
               Created
@@ -174,7 +178,11 @@ class DirectDebitArrangementController @Inject()(
               )
               audit[TtpArrangementAuditWrapper](
                 "CreateArrangementFailure",
-                TtpArrangementAuditWrapper(vrn,ttpArrangement)
+                TtpArrangementAuditWrapper(
+                  vrn,
+                  ttpArrangement,
+                  letterAndControl
+                )
               )
               // n.b. we fail silently as there is a manual intervention to fix user state
               Created
@@ -189,7 +197,11 @@ class DirectDebitArrangementController @Inject()(
               )
               audit[TtpArrangementAuditWrapper](
                 "CreateArrangementFailure",
-                TtpArrangementAuditWrapper(vrn,ttpArrangement)
+                TtpArrangementAuditWrapper(
+                  vrn,
+                  ttpArrangement,
+                  letterAndControl
+                )
               )
               NotAcceptable
           }
