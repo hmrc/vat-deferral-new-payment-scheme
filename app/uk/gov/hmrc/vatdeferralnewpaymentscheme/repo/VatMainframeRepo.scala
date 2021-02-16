@@ -31,7 +31,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoVatMainframeRepo])
 trait VatMainframeRepo extends BaseFileImportRepo {
-  def exists(vrn: String): Future[Boolean]
+  def findOne(vrn: String): Future[Option[VatMainframe]]
 }
 
 @Singleton
@@ -62,8 +62,8 @@ class MongoVatMainframeRepo @Inject() (
     }
   }
 
-  def exists(vrn: String): Future[Boolean] = {
-    find("vrn" -> vrn).map(_.nonEmpty).recover{ case _ ⇒ false }
+  def findOne(vrn: String): Future[Option[VatMainframe]] = {
+    find("vrn" -> vrn).map(_.headOption) // TODO consider replacing headOption
   }
 
   override def indexes: Seq[Index] = Seq(

@@ -33,12 +33,13 @@ import scala.concurrent.ExecutionContext
 
 class BaseSpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with MockitoSugar {
 
-  val fakeRequest = FakeRequest("POST", "/")
+  val fakeRequest   = FakeRequest("POST", "/")
   val env           = Environment.simple()
   val configuration = Configuration.load(env)
   val serviceConfig = new ServicesConfig(configuration)
   val appConfig     = new AppConfig(configuration, serviceConfig)
-  val cc = Helpers.stubControllerComponents()
+  val cc            = Helpers.stubControllerComponents()
+
   implicit val materializer: Materializer = app.materializer
   implicit val executionContext = app.injector.instanceOf[ExecutionContext]
   implicit val auditConnector   = mock[AuditConnector]
