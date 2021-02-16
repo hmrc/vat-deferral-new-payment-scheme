@@ -39,6 +39,7 @@ object VatMainframe  extends FileImportParser[VatMainframe] {
     }
     catch {
       case e:Throwable => {
+        logger.warn("File Import: VatMainframe String is invalid")
         VatMainframe("error", BigDecimal(0), BigDecimal(0))
       }
     }
@@ -48,6 +49,6 @@ object VatMainframe  extends FileImportParser[VatMainframe] {
     item.cast[VatMainframe]
       .fold(
         throw new RuntimeException("FileImport: unable to cast item as VatMainframe")
-      )(ttp => ttp.vrn != "error")
+      )(x => x.vrn != "error")
   }
 }

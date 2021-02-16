@@ -33,7 +33,7 @@ object PaymentOnAccount extends FileImportParser[PaymentOnAccount]  {
       PaymentOnAccount(line.substring(2, 11))
     }
     else {
-      logger.info("File Import: Payment on account String is invalid")
+      logger.info("File Import: PaymentOnAccount String is invalid")
       PaymentOnAccount("error") // TODO: Return an None
     }
   }
@@ -41,7 +41,7 @@ object PaymentOnAccount extends FileImportParser[PaymentOnAccount]  {
   def filter[A](item: A): Boolean = {
     item.cast[PaymentOnAccount]
       .fold(
-        throw new RuntimeException("FileImport: unable to cast item as TimeToPay")
-      )(ttp => ttp.vrn != "error")
+        throw new RuntimeException("FileImport: unable to cast item as PaymentOnAccount")
+      )(x => x.vrn != "error")
   }
 }

@@ -33,7 +33,7 @@ object TimeToPay extends FileImportParser[TimeToPay]  {
       TimeToPay(line.substring(2, 11))
     }
     else {
-      logger.info("File Import: Time to Pay String is invalid")
+      logger.warn("File Import: Time to Pay String is invalid")
       TimeToPay("error") // TODO: Return an None
     }
   }
@@ -42,6 +42,6 @@ object TimeToPay extends FileImportParser[TimeToPay]  {
     item.cast[TimeToPay]
       .fold(
         throw new RuntimeException("FileImport: unable to cast item as TimeToPay")
-      )(ttp => ttp.vrn != "error")
+      )(x => x.vrn != "error")
   }
 }
