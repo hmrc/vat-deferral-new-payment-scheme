@@ -48,7 +48,6 @@ class EligibilityController @Inject()(
 
   val logger = Logger(getClass)
   val nof: Future[Boolean] = Future.successful(false)
-  val not: Future[Boolean] = Future.successful(true)
 
   def get(vrn: String): Action[AnyContent] = Action.async {
     (for {
