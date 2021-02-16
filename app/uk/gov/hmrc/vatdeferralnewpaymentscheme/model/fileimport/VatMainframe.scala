@@ -20,7 +20,14 @@ import play.api.Logger
 import play.api.libs.json.Json
 import shapeless.syntax.typeable._
 
-case class VatMainframe(vrn: String, deferredCharges: BigDecimal, payments: BigDecimal)
+case class VatMainframe(
+  vrn: String,
+  deferredCharges: BigDecimal,
+  payments: BigDecimal
+) {
+  def outstandingExists: Boolean =
+    deferredCharges - payments > 0
+}
 
 object VatMainframe  extends FileImportParser[VatMainframe] {
   implicit val format = Json.format[VatMainframe]

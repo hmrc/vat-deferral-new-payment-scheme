@@ -24,23 +24,27 @@ import uk.gov.hmrc.http.HttpClient
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.financialdata.FinancialDataResponse
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.VatMainframeRepo
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.FinancialDataService
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton()
 class FinancialDataController @Inject()(
   http: HttpClient,
   appConfig: AppConfig,
   cc: ControllerComponents,
-  financialDataService: FinancialDataService
+  financialDataService: FinancialDataService,
+  vatMainframeRepo: VatMainframeRepo
 )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   val logger = Logger(getClass)
 
   def get(vrn: String): Action[AnyContent] = Action.async {
     for {
-      financialData <- financialDataService.getFinancialData(vrn)
+      vmf <- vatMainframeRepo.findOne(vrn)
+      financialData <- if(vmf.isEmpty) financialDataService.getFinancialData(vrn)
+                       else Future.successful(vmf.fold(BigDecimal(0),BigDecimal(0))(x =>(x.deferredCharges, x.payments)))
     } yield {
       val fd = FinancialDataResponse(financialData._1.toString, financialData._2.toString)
       val financialDataResponse = Json.toJson(fd).toString()

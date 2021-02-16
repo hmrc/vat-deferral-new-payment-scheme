@@ -25,7 +25,7 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesCacheConnector, DesConnector}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.eligibility.EligibilityResponse
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, PaymentPlanStore, TimeToPayRepo}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, PaymentPlanStore, TimeToPayRepo, VatMainframeRepo}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.FinancialDataService
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -39,7 +39,9 @@ class EligibilityController @Inject()(
   financialDataService: FinancialDataService,
   paymentOnAccountRepo: PaymentOnAccountRepo,
   timeToPayRepo: TimeToPayRepo,
-  paymentPlanStore: PaymentPlanStore
+  vatMainframeRepo: VatMainframeRepo,
+  paymentPlanStore: PaymentPlanStore,
+  cacheConnector: DesCacheConnector
 )(
   implicit ec: ExecutionContext
 ) extends BackendController(cc) {
@@ -52,8 +54,13 @@ class EligibilityController @Inject()(
       a <- paymentPlanStore.exists(vrn)
       b <- if (a) nof else paymentOnAccountRepo.exists(vrn)
       c <- if (a || b) nof else timeToPayRepo.exists(vrn)
-      d <- if (a || b || c) nof else financialDataService.getFinancialData(vrn).map(x => (x._1 + x._2) > 0)
-      e <- if (!d) nof else desConnector.getObligations(vrn).map(_.obligations.nonEmpty)
+      vmf <- vatMainframeRepo.findOne(vrn)
+      d <- if (a || b || c ) nof
+           else if(vmf.isEmpty) financialDataService.getFinancialData(vrn).map(x => (x._1 + x._2) > 0)
+           else Future.successful(vmf.fold(false)(_.outstandingExists))
+      e <- if (!d) nof
+           else if (vmf.isEmpty) desConnector.getObligations(vrn).map(_.obligations.nonEmpty)
+           else cacheConnector.getVatCacheObligations(vrn).map(_.obligations.nonEmpty)
     } yield EligibilityResponse(a, b, c, Some(e), d)).map { result =>
       logger.info("EligibilityResponse was retrieved successfully")
       Ok(Json.toJson(result).toString)
