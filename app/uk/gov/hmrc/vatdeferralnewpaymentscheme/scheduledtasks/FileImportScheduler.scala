@@ -30,19 +30,14 @@ import scala.concurrent.duration._
 class FileImportScheduler @Inject() (
   actorSystem: ActorSystem,
   @Named("payloadInterval") interval: FiniteDuration,
-  @Named("fileImportEnabled") enabled: Boolean,
   fileImportService: FileImportService) {
 
   val logger = Logger(getClass)
 
-  if (enabled) {
-    logger.info(s"File Import: Initialising file import processing every $interval")
-    actorSystem.scheduler.schedule(FiniteDuration(30, TimeUnit.MINUTES), interval) {
-      fileImportService.importS3File()
+  logger.info(s"File Import: Initialising file import processing every $interval")
+  actorSystem.scheduler.schedule(FiniteDuration(30, TimeUnit.MINUTES), interval) {
+    fileImportService.importS3File()
 
-    }
-  } else {
-    logger.info("File Import: File import is disabled")
   }
 }
 
@@ -57,16 +52,9 @@ class FileImportSchedulerModule(environment: Environment, val runModeConfigurati
   def interval(): FiniteDuration =
     new FiniteDuration(
       runModeConfiguration
-        .getOptional[Int]("microservice.services.schedulers.fileimport.interval.seconds")
+        .getOptional[Int]("schedulers.fileImport.intervalSeconds")
         .getOrElse(900)
         .toLong,
       TimeUnit.SECONDS
     )
-
-  @Provides
-  @Named("fileImportEnabled")
-  def enabled(): Boolean =
-    runModeConfiguration
-      .getOptional[Boolean]("microservice.services.schedulers.fileimport.enabled")
-      .getOrElse(false)
 }

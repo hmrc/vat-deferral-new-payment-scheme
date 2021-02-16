@@ -30,9 +30,8 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.TimeToPay
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoTimeToPayRepo])
-trait TimeToPayRepo extends BulkInsertFlow {
+trait TimeToPayRepo extends BaseFileImportRepo {
   def exists(vrn: String): Future[Boolean]
-  def renameCollection(): Future[Boolean]
 }
 
 @Singleton

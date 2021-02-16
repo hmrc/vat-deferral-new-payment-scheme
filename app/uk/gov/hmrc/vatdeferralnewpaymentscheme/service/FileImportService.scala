@@ -16,24 +16,22 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 
-import java.util.Date
-
-import akka.NotUsed
-import akka.stream.scaladsl.Flow
-import javax.inject.Inject
 import play.api.Logger
-import reactivemongo.api.commands.MultiBulkWriteResult
+import reactivemongo.play.json.JSONSerializationPack.Writer
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.AmazonS3Connector
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.TimeToPay
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{ImportFileRepo, LockRepository, PaymentOnAccountRepo, TimeToPayRepo}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.{FileImportParser, VatMainframe, PaymentOnAccount, TimeToPay}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo._
 
+import java.util.Date
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class FileImportService @Inject()(
    timeToPayRepo: TimeToPayRepo,
    paymentOnAccountRepo: PaymentOnAccountRepo,
    fileImportRepo: ImportFileRepo,
+   vatMainframeRepo: VatMainframeRepo,
    lockRepository: LockRepository,
    config: AppConfig
  )(implicit ec: ExecutionContext) {
@@ -41,33 +39,17 @@ class FileImportService @Inject()(
   val logger = Logger(getClass)
 
   def importS3File(): Unit = {
-      importFile[TimeToPay](
-        config.ttpFilename,
-        1,
-        { case x => ParseTTPString(x) },
-        { timeToPayRepo.insertFlow},
-        ttpFilter
-      )
-      // TODO add other importFile calls
+    if (config.ttpEnabled) importFile[TimeToPay](config.ttpFilename, timeToPayRepo, TimeToPay, 1) else logger.info("File Import: TimeToPay File import is disabled")
+    if (config.poaEnabled) importFile[PaymentOnAccount](config.poaFilename, paymentOnAccountRepo, PaymentOnAccount, 2) else logger.info("File Import: PaymentOnAccount File import is disabled")
+    if (config.vmfEnabled) importFile[VatMainframe](config.vmfFilename, vatMainframeRepo, VatMainframe, 3) else logger.info("File Import: VatMainframe File import is disabled")
   }
 
-  def afterImport(
-    s3FileLastModifiedDate: Date,
-    filename: String
-  ): Future[Unit] = {
-    for {
-      _ <- timeToPayRepo.renameCollection()
-      _ <- fileImportRepo.updateLastModifiedDate(filename, s3FileLastModifiedDate)
-    } yield ()
-  }
-
-  private def importFile[A](
+  def importFile[A](
     filename: String,
-    lockId: Int,
-    lineToItem: PartialFunction[String, A],
-    mongoBulkInsertFlow: Flow[Seq[A], MultiBulkWriteResult, NotUsed],
-    itemFilter: A => Boolean = {_:A => false}
-  ): Future[Unit] = {
+    baseFileImportRepo: BaseFileImportRepo,
+    fileImportParser: FileImportParser[A],
+    lockId: Int
+  )(implicit writer: Writer[A]): Future[Unit] = {
 
     logger.info(s"File Import: filename: $filename: Import file triggered with parameters: region:${config.region}, bucket:${config.bucket}")
 
@@ -93,11 +75,10 @@ class FileImportService @Inject()(
                   amazonS3Connector
                     .chunkFileDownload(
                       filename,
-                      lineToItem,
-                      mongoBulkInsertFlow,
-                      afterImport(s3FileLastModifiedDate, filename),
-                      itemFilter
-                    )
+                      { case x => fileImportParser.parse(x) },
+                      baseFileImportRepo.insertFlow,
+                      afterImport(s3FileLastModifiedDate, filename, baseFileImportRepo),
+                      fileImportParser.filter)
                 }
               }
             }
@@ -116,23 +97,15 @@ class FileImportService @Inject()(
     }
   }
 
-  private def ParseTTPString(line: String): TimeToPay = {
-    //  TODO: Discuss Validation
-    if (line.startsWith("2") && line.length == 11) {
-      TimeToPay(line.substring(2, 11))
-    }
-    else{
-      logger.info("File Import: Time to Pay String is invalid")
-      TimeToPay("error") // TODO: Return an None
-    }
-  }
-
-  def ttpFilter[A](item: A): Boolean = {
-    import shapeless.syntax.typeable._
-    item.cast[TimeToPay]
-      .fold(
-        throw new RuntimeException("FileImport: unable to cast item as TimeToPay")
-      )(ttp => ttp.vrn != "error")
+  private def afterImport(
+     s3FileLastModifiedDate: Date,
+     filename: String,
+     baseFileImportRepo: BaseFileImportRepo
+   ): Future[Unit] = {
+    for {
+      _ <- baseFileImportRepo.renameCollection()
+      _ <- fileImportRepo.updateLastModifiedDate(filename, s3FileLastModifiedDate)
+    } yield ()
   }
 
   private def withLock(id: Int)(f: => Future[Unit]): Future[Unit] = {
