@@ -32,10 +32,18 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   lazy val ddiRefNoGenMinValue: Int = config.get[Int]("ddiRefNoGenMinValue")
   lazy val ddiRefNoGenMaxValue: Int = config.get[Int]("ddiRefNoGenMaxValue")
 
-  lazy val folderName: String = config.get[String]("s3.folderName")
-  lazy val bucket: String = config.get[String]("s3.bucket")
-  lazy val region: String = config.get[String]("s3.region")
-  val ttpFilename: String = config.get[String]("microservice.services.schedulers.fileimport.ttpFilename")
+  lazy val bucket: String = config.get[String]("schedulers.fileImport.bucket")
+  lazy val region: String = config.get[String]("schedulers.fileImport.region")
+
+  val ttpEnabled: Boolean = config.getOptional[Boolean]("schedulers.fileImport.timeToPay.enabled").getOrElse(false)
+  val ttpFilename: String = config.get[String]("schedulers.fileImport.timeToPay.filename")
+
+  val poaEnabled: Boolean = config.getOptional[Boolean]("schedulers.fileImport.paymentOnAccount.enabled").getOrElse(false)
+  val poaFilename: String = config.get[String]("schedulers.fileImport.paymentOnAccount.filename")
+
+  val vmfEnabled: Boolean = config.getOptional[Boolean]("schedulers.fileImport.legacyMainframe.enabled").getOrElse(false)
+  val vmfFilename: String = config.get[String]("schedulers.fileImport.legacyMainframe.filename")
+
   lazy val getObligationsPath: String = config.get[String]("microservice.services.des-service.getObligationsPath")
   lazy val getFinancialDataPath: String = config.get[String]("microservice.services.des-service.getFinancialDataPath")
 

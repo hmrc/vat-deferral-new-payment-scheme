@@ -25,33 +25,37 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.collection.JSONCollection
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.PaymentOnAccount
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.VatMainframe
 
 import scala.concurrent.{ExecutionContext, Future}
 
-@ImplementedBy(classOf[MongoPaymentOnAccountRepo])
-trait PaymentOnAccountRepo extends BaseFileImportRepo  {
+@ImplementedBy(classOf[MongoVatMainframeRepo])
+trait VatMainframeRepo extends BaseFileImportRepo {
   def exists(vrn: String): Future[Boolean]
 }
 
 @Singleton
-class MongoPaymentOnAccountRepo @Inject() (reactiveMongoComponent: ReactiveMongoComponent)(implicit ec: ExecutionContext)
-  extends ReactiveRepository[PaymentOnAccount, BSONObjectID] (
-    collectionName = "fileImportPaymentOnAccount",
+class MongoVatMainframeRepo @Inject() (
+  reactiveMongoComponent: ReactiveMongoComponent
+)(
+  implicit ec: ExecutionContext
+)
+  extends ReactiveRepository[VatMainframe, BSONObjectID] (
+    collectionName = "fileImportVatMainframe",
     mongo          = reactiveMongoComponent.mongoConnector.db,
-    PaymentOnAccount.format,
+    VatMainframe.format,
     ReactiveMongoFormats.objectIdFormats)
-  with PaymentOnAccountRepo {
+    with VatMainframeRepo {
 
   val tempCollection: JSONCollection =
     mongo()
-      .collection[JSONCollection]("paymentOnAccountTemp")
+      .collection[JSONCollection]("fileImportVatMainframeTemp")
 
   def renameCollection(): Future[Boolean] = {
     collection.db.connection.database("admin")
       .flatMap { adminDatabase =>
         logger.info(s"File Import: Renaming collection via main database, params: '${collection.db.name}' '${collection.name}' ")
-        adminDatabase.renameCollection(collection.db.name, "paymentOnAccountTemp", collection.name, true)
+        adminDatabase.renameCollection(collection.db.name, "fileImportVatMainframeTemp", collection.name, true)
       }.map { renameResult: BSONCollection =>
       logger.info(s"File Import: '${collection.name}' collection renamed operation finished, result: ${renameResult}")
       true
@@ -70,5 +74,4 @@ class MongoPaymentOnAccountRepo @Inject() (reactiveMongoComponent: ReactiveMongo
       unique = true
     )
   )
-
 }

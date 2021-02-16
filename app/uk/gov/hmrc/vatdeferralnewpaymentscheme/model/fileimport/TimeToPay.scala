@@ -16,10 +16,32 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport
 
+import play.api.Logger
 import play.api.libs.json.Json
+import shapeless.syntax.typeable._
 
 case class TimeToPay(vrn: String)
 
-object TimeToPay {
+object TimeToPay extends FileImportParser[TimeToPay]  {
   implicit val format = Json.format[TimeToPay]
+
+  val logger = Logger(getClass)
+
+  def parse(line: String): TimeToPay = {
+    //  TODO: Discuss Validation
+    if (line.startsWith("2") && line.length == 11) {
+      TimeToPay(line.substring(2, 11))
+    }
+    else {
+      logger.info("File Import: Time to Pay String is invalid")
+      TimeToPay("error") // TODO: Return an None
+    }
+  }
+
+  def filter[A](item: A): Boolean = {
+    item.cast[TimeToPay]
+      .fold(
+        throw new RuntimeException("FileImport: unable to cast item as TimeToPay")
+      )(ttp => ttp.vrn != "error")
+  }
 }
