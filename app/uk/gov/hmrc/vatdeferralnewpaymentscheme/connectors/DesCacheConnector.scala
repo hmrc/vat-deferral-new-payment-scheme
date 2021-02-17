@@ -37,7 +37,7 @@ class DesCacheConnector @Inject() (
 
   lazy val serviceURL: String = servicesConfig.baseUrl("des-cache-service")
 
-  lazy val credentials: String = s"Basic ${getConfig("des-cache-service.credentials")}"
+  lazy val credentials: String = s"Bearer ${getConfig("des-cache-service.credentials")}"
   lazy val environment: String = getConfig("des-cache-service.environment")
 
   val headers = Seq("Authorization" -> credentials, "Environment" -> environment)
