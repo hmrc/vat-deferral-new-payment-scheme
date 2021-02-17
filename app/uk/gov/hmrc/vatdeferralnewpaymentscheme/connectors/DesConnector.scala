@@ -21,7 +21,7 @@ import play.api.Logger
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, NotFoundException}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.financialdata.FinancialData
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.financialdata.{FinancialData, FinancialTransactions}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.obligations.{ObligationData, Obligations}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -54,6 +54,10 @@ class DesConnector @Inject() (
 
   def getFinancialData(vrn: String): Future[FinancialData] = {
     val url: String = s"$serviceURL/${appConfig.getFinancialDataPath.replace("$vrn", vrn)}"
-    http.GET[FinancialData](url)
+    http.GET[FinancialData](url) recover {
+      case _: NotFoundException =>
+        logger.info("No FinancialData found")
+        FinancialData(financialTransactions = Seq.empty[FinancialTransactions])
+    }
   }
 }
