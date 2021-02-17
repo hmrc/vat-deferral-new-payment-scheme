@@ -29,13 +29,7 @@ object PaymentOnAccount extends FileImportParser[PaymentOnAccount]  {
 
   def parse(line: String): PaymentOnAccount = {
     //  TODO: Discuss Validation
-    if (line.startsWith("2") && line.length == 11) {
-      PaymentOnAccount(line.substring(2, 11))
-    }
-    else {
-      logger.info("File Import: PaymentOnAccount String is invalid")
-      PaymentOnAccount("error") // TODO: Return an None
-    }
+    PaymentOnAccount(line)
   }
 
   def filter[A](item: A): Boolean = {
