@@ -29,13 +29,7 @@ object TimeToPay extends FileImportParser[TimeToPay]  {
 
   def parse(line: String): TimeToPay = {
     //  TODO: Discuss Validation
-    if (line.startsWith("2") && line.length == 11) {
-      TimeToPay(line.substring(2, 11))
-    }
-    else {
-      logger.warn("File Import: Time to Pay String is invalid")
-      TimeToPay("error") // TODO: Return an None
-    }
+    TimeToPay(line)
   }
 
   def filter[A](item: A): Boolean = {
