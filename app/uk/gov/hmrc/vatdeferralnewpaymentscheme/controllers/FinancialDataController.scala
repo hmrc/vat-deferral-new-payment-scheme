@@ -44,7 +44,7 @@ class FinancialDataController @Inject()(
     for {
       vmf <- vatMainframeRepo.findOne(vrn)
       financialData <- if(vmf.isEmpty) financialDataService.getFinancialData(vrn)
-                       else Future.successful(vmf.fold(BigDecimal(0),BigDecimal(0))(x =>(x.deferredCharges, x.payments)))
+                       else Future.successful(vmf.fold(BigDecimal(0),BigDecimal(0))(x =>(x.deferredCharges, x.deferredCharges - x.payments)))
     } yield {
       val fd = FinancialDataResponse(financialData._1.toString, financialData._2.toString)
       val financialDataResponse = Json.toJson(fd).toString()
