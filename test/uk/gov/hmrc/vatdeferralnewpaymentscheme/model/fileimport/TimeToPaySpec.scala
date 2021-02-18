@@ -25,26 +25,10 @@ class TimeToPaySpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite w
   "TimeToPay" should {
     "parse line correctly" in {
 
-      val line = "2,100000000"
+      val line = "100000000"
       val timeToPay = TimeToPay.parse(line)
 
       timeToPay.vrn shouldBe "100000000"
-    }
-
-    "return error instance 1" in {
-
-      val line = "1,TTP"
-      val timeToPay = TimeToPay.parse(line)
-
-      timeToPay.vrn shouldBe "error"
-    }
-
-    "return error instance 2" in {
-
-      val line = "3,000004"
-      val timeToPay = TimeToPay.parse(line)
-
-      timeToPay.vrn shouldBe "error"
     }
   }
 }
