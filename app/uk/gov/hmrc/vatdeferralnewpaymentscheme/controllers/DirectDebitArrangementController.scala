@@ -53,7 +53,7 @@ class DirectDebitArrangementController @Inject()(
 
   val logger = Logger(this.getClass)
 
-  private lazy val now: ZonedDateTime = ZonedDateTime.now.withZoneSameInstant(ZoneId.of("Europe/London"))
+  private def now: ZonedDateTime = ZonedDateTime.now.withZoneSameInstant(ZoneId.of("Europe/London"))
 
   def firstPaymentDate: ZonedDateTime = { // TODO: Refactor to pass in from FE
     val serviceStart: ZonedDateTime =
@@ -87,11 +87,13 @@ class DirectDebitArrangementController @Inject()(
         val startDate = firstPaymentDate.toLocalDate // TODO: Review toLocalDate
         val endDate =   firstPaymentDate.toLocalDate.plusMonths(numberOfPayments - 1) // TODO: Review toLocalDate
 
+        val accountName = if (ddar.accountName.matches("^[a-zA-Z][a-zA-Z '.& /]{1,39}$")) ddar.accountName else "NA"
+
         val directDebitInstructionRequest = DirectDebitInstructionRequest(
           ddar.sortCode,
           ddar.accountNumber,
-          ddar.accountName,
-          paperAuddisFlag = false,
+          accountName,
+          paperAuddisFlag = false ,
           directDebitService
             .createSeededDDIRef(vrn)
             .fold(throw new RuntimeException("DDIRef cannot be generated"))(_.toString)
