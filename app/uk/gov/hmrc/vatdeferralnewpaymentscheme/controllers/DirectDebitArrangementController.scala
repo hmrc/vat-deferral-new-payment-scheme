@@ -74,6 +74,12 @@ class DirectDebitArrangementController @Inject()(
     }
   }
 
+  def fixAccountName(accountName: String): String = {
+    if (accountName.take(40).matches("^[0-9a-zA-Z &@()!:,+`\\-\\'\\.\\/^]{1,40}$")) {
+      accountName.take(40)
+    } else "NA"
+  }
+
   def post(vrn: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
     withJsonBody[DirectDebitArrangementRequest] {
       ddar => {
@@ -87,12 +93,10 @@ class DirectDebitArrangementController @Inject()(
         val startDate = firstPaymentDate.toLocalDate // TODO: Review toLocalDate
         val endDate =   firstPaymentDate.toLocalDate.plusMonths(numberOfPayments - 1) // TODO: Review toLocalDate
 
-        val accountName = if (ddar.accountName.matches("^[a-zA-Z][a-zA-Z '.& /]{1,39}$")) ddar.accountName else "NA"
-
         val directDebitInstructionRequest = DirectDebitInstructionRequest(
           ddar.sortCode,
           ddar.accountNumber,
-          accountName,
+          fixAccountName(ddar.accountName),
           paperAuddisFlag = false ,
           directDebitService
             .createSeededDDIRef(vrn)
