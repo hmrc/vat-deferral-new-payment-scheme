@@ -64,6 +64,22 @@ class DirectDebitArrangementControllerSpec extends BaseSpec {
     }
   }
 
+  "fixAccountName" should {
+    val controller = testController(
+      new FakeDesDirectDebitConnector(201),
+      new FakeDesTimeToPayArrangementConnector(4001)
+    )
+    "replace an account name containing illegal char in first 40" in {
+      controller.fixAccountName("foo*") should be ("NA")
+    }
+    "truncate account name where first 40 char are allowed" in {
+      controller.fixAccountName("0123456789 &@()!:,+`-'./^asdfgASDFGasdfg***") should be ("0123456789 &@()!:,+`-'./^asdfgASDFGasdfg")
+    }
+    "pass through a shorter account name without illegal char verbatim" in {
+      controller.fixAccountName("foobar") should be ("foobar")
+    }
+  }
+
   def testController(
     ddConnector: DesDirectDebitConnector,
     ttpConnector: DesTimeToPayArrangementConnector
