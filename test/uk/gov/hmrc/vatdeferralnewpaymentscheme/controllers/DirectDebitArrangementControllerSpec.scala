@@ -20,8 +20,9 @@ import play.api.http.Status
 import play.api.libs.json.{JsValue, Json}
 import play.api.test.Helpers.{status, _}
 import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesDirectDebitConnector, DesTimeToPayArrangementConnector}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.DesTimeToPayArrangementConnector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.DirectDebitArrangementRequest
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.DesDirectDebitService
 
 class DirectDebitArrangementControllerSpec extends BaseSpec {
 
@@ -40,7 +41,7 @@ class DirectDebitArrangementControllerSpec extends BaseSpec {
   "GET /" should {
     "return Created for happy path" in {
       val controller = testController(
-        new FakeDesDirectDebitConnector(201),
+        new FakeDesDirectDebitService(201),
         new FakeDesTimeToPayArrangementConnector(202)
       )
       val result = controller.post("9999999999").apply(FakeRequest("POST", "/direct-debit-arrangement/:vrn",fakeHeaders, fakeBody))
@@ -48,7 +49,7 @@ class DirectDebitArrangementControllerSpec extends BaseSpec {
     }
     "also return Created for failure from arrangement API  path" in {
       val controller = testController(
-        new FakeDesDirectDebitConnector(201),
+        new FakeDesDirectDebitService(201),
         new FakeDesTimeToPayArrangementConnector(4001)
       )
       val result = controller.post("9999999999").apply(FakeRequest("POST", "/direct-debit-arrangement/:vrn",fakeHeaders, fakeBody))
@@ -56,7 +57,7 @@ class DirectDebitArrangementControllerSpec extends BaseSpec {
     }
     "return NotAcceptable for failure setting up payment plan" in {
       val controller = testController(
-        new FakeDesDirectDebitConnector(400),
+        new FakeDesDirectDebitService(400),
         new FakeDesTimeToPayArrangementConnector(4001)
       )
       val result = controller.post("9999999999").apply(FakeRequest("POST", "/direct-debit-arrangement/:vrn",fakeHeaders, fakeBody))
@@ -66,7 +67,7 @@ class DirectDebitArrangementControllerSpec extends BaseSpec {
 
   "fixAccountName" should {
     val controller = testController(
-      new FakeDesDirectDebitConnector(201),
+      new FakeDesDirectDebitService(201),
       new FakeDesTimeToPayArrangementConnector(4001)
     )
     "replace an account name containing illegal char in first 40" in {
@@ -81,12 +82,12 @@ class DirectDebitArrangementControllerSpec extends BaseSpec {
   }
 
   def testController(
-    ddConnector: DesDirectDebitConnector,
+    directDebitService: DesDirectDebitService,
     ttpConnector: DesTimeToPayArrangementConnector
   ) = new DirectDebitArrangementController (
     appConfig,
     cc,
-    ddConnector,
+    directDebitService,
     ttpConnector,
     ppStore,
     ddService
