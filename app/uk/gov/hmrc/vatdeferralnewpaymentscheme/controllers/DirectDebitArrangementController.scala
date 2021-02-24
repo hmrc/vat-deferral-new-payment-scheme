@@ -16,10 +16,6 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
-import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime, ZoneId, ZonedDateTime}
-
-import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.JsValue
 import play.api.mvc.{Action, ControllerComponents}
@@ -27,13 +23,16 @@ import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesDirectDebitConnector, DesTimeToPayArrangementConnector}
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.{DirectDebitArrangementRequest, TtpArrangementAuditWrapper}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.DesTimeToPayArrangementConnector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit._
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.{DirectDebitArrangementRequest, TtpArrangementAuditWrapper}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.DirectDebitGenService
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{DesDirectDebitService, DirectDebitGenService}
 
+import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, LocalDateTime, ZoneId, ZonedDateTime}
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.math.BigDecimal.RoundingMode
 
@@ -41,7 +40,7 @@ import scala.math.BigDecimal.RoundingMode
 class DirectDebitArrangementController @Inject()(
   appConfig: AppConfig,
   cc: ControllerComponents,
-  desDirectDebitConnector: DesDirectDebitConnector,
+  desDirectDebitService: DesDirectDebitService,
   desTimeToPayArrangementConnector: DesTimeToPayArrangementConnector,
   paymentPlanStore: PaymentPlanStore,
   directDebitService: DirectDebitGenService
@@ -95,7 +94,7 @@ class DirectDebitArrangementController @Inject()(
           ddar.sortCode,
           ddar.accountNumber,
           fixAccountName(ddar.accountName),
-          paperAuddisFlag = false ,
+          paperAuddisFlag = false,
           directDebitService
             .createSeededDDIRef(vrn)
             .fold(throw new RuntimeException("DDIRef cannot be generated"))(_.toString)
@@ -151,7 +150,7 @@ class DirectDebitArrangementController @Inject()(
         val letterAndControl = LetterAndControl(totalAll = totalAll.toString)
 
         for {
-          a <- desDirectDebitConnector.createPaymentPlan(paymentPlanRequest, vrn)
+          a <- desDirectDebitService.createPaymentPlan(paymentPlanRequest, vrn)
           arrangement = TimeToPayArrangementRequest(ttpArrangement, letterAndControl)
           b <- if (a.isRight) desTimeToPayArrangementConnector.createArrangement(vrn, arrangement)
                else Future.successful(Left(UpstreamErrorResponse("fake error", 418)))
