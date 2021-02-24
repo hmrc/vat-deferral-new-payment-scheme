@@ -16,25 +16,28 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.service
 
-import javax.inject.Inject
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.smartstub._
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
+
+import java.time.{LocalDateTime, ZoneOffset}
+import javax.inject.Inject
 
 class DirectDebitGenService @Inject()(
   appConfig: AppConfig
 ) {
 
-  def createSeededDDIRef(vrn: String): Option[Int] = {
+  def createSeededDDIRef(vrn: String, withDateTime: Boolean = false): Option[Int] = {
     val min = appConfig.ddiRefNoGenMinValue
     val max = appConfig.ddiRefNoGenMaxValue
-    
+
+    lazy val seed = if (withDateTime) vrn.hashCode.toLong + LocalDateTime.now.toEpochSecond(ZoneOffset.UTC) else vrn.hashCode.toLong
+
     val gen = DDIRefGen.genDDIRefNumber(min, max)
     //For QA we need to retrieve different DDIRef's from one UTR
     //This should never be enabled in production
-      if (appConfig.useRandomDDIRefSeed)
-        gen.sample
-      else
-        gen.seeded(vrn.hashCode.toLong)
+    if (appConfig.useRandomDDIRefSeed)
+      gen.sample
+    else
+      gen.seeded(seed)
   }
-
 }

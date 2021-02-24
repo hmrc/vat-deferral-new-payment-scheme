@@ -17,12 +17,12 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.DesDirectDebitConnector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit.{DdiReference, PaymentPlanReference, PaymentPlanRequest, PpReference}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.DesDirectDebitService
 
 import scala.concurrent.Future
 
-class FakeDesDirectDebitConnector(seed: Int) extends DesDirectDebitConnector {
+class FakeDesDirectDebitService(seed: Int) extends DesDirectDebitService {
 
   override def createPaymentPlan(request: PaymentPlanRequest, credentialId: String): Future[Either[UpstreamErrorResponse,PaymentPlanReference]] = seed match {
     case 201 =>
