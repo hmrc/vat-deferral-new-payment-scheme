@@ -65,13 +65,13 @@ class FirstPaymentDateSpec extends AnyWordSpec with Matchers {
     }
 
     "Today is Saturday" should {
-      "be the following Friday" in {
+      "be a week Monday" in {
         assertDates("2021-02-27", "2021-03-08")
       }
     }
 
     "Today is Sunday" should {
-      "be the following Friday" in {
+      "be a week Monday" in {
         assertDates("2021-02-28", "2021-03-08")
       }
     }
