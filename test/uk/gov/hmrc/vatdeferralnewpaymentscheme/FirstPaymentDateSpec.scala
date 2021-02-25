@@ -25,9 +25,9 @@ class FirstPaymentDateSpec extends AnyWordSpec with Matchers {
   def firstPaymentDate(date: LocalDate): LocalDate = {
     date match {
       case dt if dt.getDayOfWeek == 6 =>
-        dt.plusDays(6)
+        dt.plusDays(9)
       case dt if dt.getDayOfWeek == 7 =>
-        dt.plusDays(5)
+        dt.plusDays(8)
       case dt =>
         dt.plusDays(7)
     }
@@ -64,22 +64,20 @@ class FirstPaymentDateSpec extends AnyWordSpec with Matchers {
       }
     }
 
-    // TODO: Verify this is the correct firstPaymentDate or should it be the Monday 8 March
     "Today is Saturday" should {
       "be the following Friday" in {
-        assertDates("2021-02-27", "2021-03-05")
+        assertDates("2021-02-27", "2021-03-08")
       }
     }
 
-    // TODO: Verify this is the correct firstPaymentDate or should it be the Monday 8 March
     "Today is Sunday" should {
       "be the following Friday" in {
-        assertDates("2021-02-28", "2021-03-05")
+        assertDates("2021-02-28", "2021-03-08")
       }
     }
 
     // TODO: Add extra days for bank holidays
-    
+
 
     def assertDates(today: String, expected: String) = {
       val today1 = LocalDate.parse(today)
