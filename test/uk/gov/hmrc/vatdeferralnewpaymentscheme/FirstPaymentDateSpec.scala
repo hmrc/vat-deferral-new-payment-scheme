@@ -16,22 +16,13 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme
 
-import org.joda.time.LocalDate
+import java.time.{LocalDateTime, ZoneId, ZonedDateTime}
+
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers._
 
 class FirstPaymentDateSpec extends AnyWordSpec with Matchers {
-
-  def firstPaymentDate(date: LocalDate): LocalDate = {
-    date match {
-      case dt if dt.getDayOfWeek == 6 =>
-        dt.plusDays(9)
-      case dt if dt.getDayOfWeek == 7 =>
-        dt.plusDays(8)
-      case dt =>
-        dt.plusDays(7)
-    }
-  }
 
   "First payment day" when {
     "Today is Monday" should {
@@ -76,13 +67,22 @@ class FirstPaymentDateSpec extends AnyWordSpec with Matchers {
       }
     }
 
-    // TODO: Add extra days for bank holidays
+    "A week from today is a bank holiday" should {
+      "be the following working day" in {
+        assertDates("2021-03-26", "2021-04-06")
+        assertDates("2021-03-29", "2021-04-06")
+        assertDates("2021-04-26", "2021-05-04")
+        assertDates("2021-05-24", "2021-06-01")
+      }
+    }
 
+    def parse(date: String): ZonedDateTime =
+      ZonedDateTime.of(LocalDateTime.parse(date + "T10:00:00"), ZoneId.of("Europe/London"))
 
     def assertDates(today: String, expected: String) = {
-      val today1 = LocalDate.parse(today)
-      val expectedFirstPaymentDate = LocalDate.parse(expected)
-      firstPaymentDate(today1) shouldBe expectedFirstPaymentDate
+      val today1 = parse(today)
+      val expectedFirstPaymentDate = parse(expected)
+      today1.firstPaymentDate shouldBe expectedFirstPaymentDate
     }
   }
 }
