@@ -16,10 +16,13 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme
 
+import java.time._
+
 import play.api.libs.json.Writes
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
 package object controllers {
@@ -40,4 +43,29 @@ package object controllers {
     )
   }
 
+  implicit class FirstPaymentDay(zdt: ZonedDateTime){
+
+    // 2021 bank hols 2/4 5/4 3/5 31/5
+    val bankHolidays = Seq(
+      LocalDate.of(2021, 4, 2),
+      LocalDate.of(2021, 4, 5),
+      LocalDate.of(2021, 5, 3),
+      LocalDate.of(2021, 5, 31)
+    )
+
+    @tailrec
+    final def firstPaymentDate: ZonedDateTime = {
+      val pdt = zdt.plusDays(7)
+      pdt match {
+        case dt if bankHolidays.contains(dt.toLocalDate) =>
+          zdt.plusDays(1).firstPaymentDate
+        case dt if dt.getDayOfWeek == DayOfWeek.SATURDAY =>
+          zdt.plusDays(2).firstPaymentDate
+        case dt if dt.getDayOfWeek == DayOfWeek.SUNDAY =>
+          zdt.plusDays(1).firstPaymentDate
+        case _ =>
+          pdt
+      }
+    }
+  }
 }
