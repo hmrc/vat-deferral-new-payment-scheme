@@ -24,7 +24,7 @@ import uk.gov.hmrc.http.HttpClient
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.financialdata.FinancialDataResponse
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.VatMainframeRepo
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, VatMainframeRepo}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.FinancialDataService
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -35,16 +35,19 @@ class FinancialDataController @Inject()(
   appConfig: AppConfig,
   cc: ControllerComponents,
   financialDataService: FinancialDataService,
-  vatMainframeRepo: VatMainframeRepo
+  vatMainframeRepo: VatMainframeRepo,
+  poaRepo: PaymentOnAccountRepo
 )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   val logger = Logger(getClass)
 
   def get(vrn: String): Action[AnyContent] = Action.async {
     for {
+      poa <- poaRepo.findOne(vrn)
       vmf <- vatMainframeRepo.findOne(vrn)
-      financialData <- if(vmf.isEmpty) financialDataService.getFinancialData(vrn)
-                       else Future.successful(vmf.fold(BigDecimal(0),BigDecimal(0))(x =>(x.deferredCharges, x.deferredCharges - x.payments)))
+      financialData <- if(appConfig.poaUsersEnabled & poa.nonEmpty) Future.successful(poa.fold(BigDecimal(0),BigDecimal(0))(x =>(x.outstandingAmount.getOrElse(BigDecimal(0)), x.outstandingAmount.getOrElse(BigDecimal(0)))))
+                       else if(vmf.nonEmpty) Future.successful(vmf.fold(BigDecimal(0),BigDecimal(0))(x =>(x.deferredCharges, x.deferredCharges - x.payments)))
+                       else financialDataService.getFinancialData(vrn)
     } yield {
       val fd = FinancialDataResponse(financialData._1.toString, financialData._2.toString)
       val financialDataResponse = Json.toJson(fd).toString()

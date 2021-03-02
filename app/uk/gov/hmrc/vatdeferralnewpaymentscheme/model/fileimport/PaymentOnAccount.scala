@@ -20,7 +20,10 @@ import play.api.Logger
 import play.api.libs.json.Json
 import shapeless.syntax.typeable._
 
-case class PaymentOnAccount(vrn: String)
+case class PaymentOnAccount(vrn: String, outstandingAmount: Option[BigDecimal]){
+  def outstandingExists: Boolean =
+    outstandingAmount.getOrElse(BigDecimal(0)) > 0
+}
 
 object PaymentOnAccount extends FileImportParser[PaymentOnAccount]  {
   implicit val format = Json.format[PaymentOnAccount]
@@ -29,7 +32,7 @@ object PaymentOnAccount extends FileImportParser[PaymentOnAccount]  {
 
   def parse(line: String): PaymentOnAccount = {
     //  TODO: Discuss Validation
-    PaymentOnAccount(line)
+    PaymentOnAccount(line, Some(BigDecimal(0))) // TODO
   }
 
   def filter[A](item: A): Boolean = {
