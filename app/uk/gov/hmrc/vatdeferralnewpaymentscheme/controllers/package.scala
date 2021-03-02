@@ -53,15 +53,20 @@ package object controllers {
       LocalDate.of(2021, 5, 31)
     )
 
+    def isWeekend: Boolean =
+      Seq(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
+        .contains(zdt.getDayOfWeek)
+
+    def isBankHoliday: Boolean =
+      bankHolidays.contains(zdt.toLocalDate)
+
+    def nonWorkingDay: Boolean = isWeekend || isBankHoliday
+
     @tailrec
     final def firstPaymentDate: ZonedDateTime = {
       val pdt = zdt.plusDays(7)
       pdt match {
-        case dt if bankHolidays.contains(dt.toLocalDate) =>
-          zdt.plusDays(1).firstPaymentDate
-        case dt if dt.getDayOfWeek == DayOfWeek.SATURDAY =>
-          zdt.plusDays(2).firstPaymentDate
-        case dt if dt.getDayOfWeek == DayOfWeek.SUNDAY =>
+        case dt if dt.nonWorkingDay =>
           zdt.plusDays(1).firstPaymentDate
         case _ =>
           pdt

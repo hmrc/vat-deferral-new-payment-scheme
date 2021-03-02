@@ -90,7 +90,8 @@ class DirectDebitArrangementControllerSpec extends BaseSpec {
     directDebitService,
     ttpConnector,
     ppStore,
-    ddService
+    ddService,
+    firstPaymentDateService
   )
 
 }
