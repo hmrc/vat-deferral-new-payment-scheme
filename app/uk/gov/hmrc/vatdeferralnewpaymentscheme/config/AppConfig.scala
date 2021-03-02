@@ -20,6 +20,8 @@ import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import java.time.LocalDate
+
 @Singleton
 class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
 
@@ -27,7 +29,7 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   val auditingEnabled: Boolean = config.get[Boolean]("auditing.enabled")
   val useRandomDDIRefSeed: Boolean = config.get[Boolean]("useRandomDDIRefSeed")
-  val graphiteHost: String     = config.get[String]("microservice.metrics.graphite.host")
+  val graphiteHost: String = config.get[String]("microservice.metrics.graphite.host")
 
   lazy val ddiRefNoGenMinValue: Int = config.get[Int]("ddiRefNoGenMinValue")
   lazy val ddiRefNoGenMaxValue: Int = config.get[Int]("ddiRefNoGenMaxValue")
@@ -50,4 +52,12 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   lazy val getVatCacheObligationsPath: String = config.get[String]("microservice.services.des-cache-service.getVatCacheObligationsPath")
 
   lazy val includedChargeReferences: Seq[String] = config.getOptional[Seq[String]]("financialDataApiFilter.includedChargeReferences").getOrElse(Seq.empty[String])
+
+  lazy val poaUsersEnabled: Boolean = {
+    if (!config.has("poaUsersEnabledFrom")) false
+    else {
+      val poa = config.getOptional[String]("poaUsersEnabledFrom").getOrElse("")
+      if (poa.matches("^\\d{4}\\-(0[1-9]|1[012])\\-(0[1-9]|[12][0-9]|3[01])$")) !LocalDate.parse(poa).isBefore(LocalDate.now()) else false
+    }
+  }
 }

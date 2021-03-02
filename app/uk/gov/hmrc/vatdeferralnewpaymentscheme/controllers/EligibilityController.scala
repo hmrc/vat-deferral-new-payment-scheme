@@ -52,12 +52,15 @@ class EligibilityController @Inject()(
   def get(vrn: String): Action[AnyContent] = Action.async {
     (for {
       a <- paymentPlanStore.exists(vrn)
-      b <- if (a) nof else paymentOnAccountRepo.exists(vrn)
+      poaUserEnabled = appConfig.poaUsersEnabled
+      b <- if (a || poaUserEnabled) nof else paymentOnAccountRepo.exists(vrn)
       c <- if (a || b) nof else timeToPayRepo.exists(vrn)
+      poa <- paymentOnAccountRepo.findOne(vrn)
       vmf <- vatMainframeRepo.findOne(vrn)
       d <- if (a || b || c ) nof
-           else if(vmf.isEmpty) financialDataService.getFinancialData(vrn).map(x => (x._1 + x._2) > 0)
-           else Future.successful(vmf.fold(false)(_.outstandingExists))
+           else if(poa.nonEmpty) Future.successful(poa.fold(false)(_.outstandingExists))
+           else if(vmf.nonEmpty) Future.successful(vmf.fold(false)(_.outstandingExists))
+           else financialDataService.getFinancialData(vrn).map(x => (x._1 + x._2) > 0)
       e <- if (!d) nof
            else if (vmf.isEmpty) desConnector.getObligations(vrn).map(_.obligations.nonEmpty)
            else cacheConnector.getVatCacheObligations(vrn).map(_.obligations.nonEmpty)
