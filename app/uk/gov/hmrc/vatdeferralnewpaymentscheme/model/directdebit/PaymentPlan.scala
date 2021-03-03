@@ -19,21 +19,42 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit
 import play.api.libs.json.Json
 import java.time.LocalDate
 
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.DirectDebitArrangementRequest
+
 case class PaymentPlan(
-                        ppType:                    String,
-                        paymentReference:          String,
-                        hodService:                String,
-                        paymentCurrency:           String,
-                        initialPaymentAmount:      String,
-                        initialPaymentStartDate:   LocalDate,
-                        scheduledPaymentAmount:    String,
-                        scheduledPaymentStartDate: LocalDate,
-                        scheduledPaymentEndDate:   LocalDate,
-                        scheduledPaymentFrequency: String,
-                        totalLiability:            String,
-                        balancingPaymentDate:      LocalDate,
-                        balancingPaymentAmount:    String)
+  paymentReference:          String,
+  initialPaymentAmount:      String,
+  initialPaymentStartDate:   LocalDate,
+  scheduledPaymentAmount:    String,
+  scheduledPaymentStartDate: LocalDate,
+  scheduledPaymentEndDate:   LocalDate,
+  totalLiability:            String,
+  balancingPaymentDate:      LocalDate,
+  balancingPaymentAmount:    String,
+  paymentCurrency:           String = "GBP",
+  hodService:                String = "VNPS",
+  ppType:                    String = "Time to Pay",
+  scheduledPaymentFrequency: String = "Calendar Monthly"
+)
 
 object PaymentPlan {
+
+  def apply(
+    vrn: String,
+    ddar: DirectDebitArrangementRequest,
+    startDate: LocalDate,
+    endDate: LocalDate
+  ): PaymentPlan =     PaymentPlan(
+    vrn,
+    ddar.firstPaymentAmount.toString,
+    startDate,
+    ddar.scheduledPaymentAmount.toString,
+    startDate.withDayOfMonth(ddar.paymentDay).plusMonths(1),
+    endDate.withDayOfMonth(ddar.paymentDay).minusMonths(1),
+    ddar.totalAmountToPay.toString,
+    endDate.withDayOfMonth(ddar.paymentDay),
+    ddar.scheduledPaymentAmount.toString
+  )
+
   implicit val format = Json.format[PaymentPlan]
 }

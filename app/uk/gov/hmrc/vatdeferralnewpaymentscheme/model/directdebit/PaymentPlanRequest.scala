@@ -16,17 +16,36 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit
 
+import java.time.LocalDate
+
 import play.api.libs.json.Json
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.DirectDebitArrangementRequest
 
 case class PaymentPlanRequest(
-  requestingService:      String,
   submissionDateTime:     String,
   knownFact:              Seq[KnownFact],
   directDebitInstruction: DirectDebitInstructionRequest,
   paymentPlan:            PaymentPlan,
-  printFlag:              Boolean
+  requestingService:      String = "VDNPS",
+  printFlag:              Boolean = false
 )
 
 object PaymentPlanRequest {
+
+  def apply(
+    vrn: String,
+    ddar: DirectDebitArrangementRequest,
+    startDate: LocalDate,
+    endDate: LocalDate,
+    submissionDateTime: String,
+    ddiReference: String,
+  ): PaymentPlanRequest =
+    PaymentPlanRequest(
+      submissionDateTime,
+      Seq(KnownFact("VRN", vrn)),
+      DirectDebitInstructionRequest(vrn, ddar, ddiReference),
+      PaymentPlan(vrn, ddar, startDate, endDate),
+    )
+
   implicit val format = Json.format[PaymentPlanRequest]
 }

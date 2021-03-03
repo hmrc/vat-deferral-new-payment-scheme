@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 import javax.inject.{Inject, Singleton}
@@ -63,8 +62,15 @@ class DirectDebitArrangementController @Inject()(
         for {
           startDate <- firstPaymentDateService.get(vrn).map(_.toLocalDate)
           endDate = startDate.plusMonths(ddar.numberOfPayments - 1)
-          ppr = paymentPlanRequest(vrn, ddar, startDate, endDate)
-          ttpa = getTtpArrangement(startDate, endDate, ddar)
+          ppr = PaymentPlanRequest(
+                  vrn,
+                  ddar,
+                  startDate,
+                  endDate,
+                  firstPaymentDateService.now.format(DateTimeFormatter.ISO_INSTANT),
+                  ddiRef(vrn: String)
+                )
+          ttpa = TtpArrangement(startDate, endDate, ddar)
           arrangement = TimeToPayArrangementRequest(ttpa, letterAndControl)
           a <- desDirectDebitService.createPaymentPlan(ppr, vrn)
           b <- if (a.isRight) desTimeToPayArrangementConnector.createArrangement(vrn, arrangement)
@@ -128,89 +134,7 @@ class DirectDebitArrangementController @Inject()(
     }
   }
 
-  def fixAccountName(accountName: String): String = {
-    if (accountName.take(40).matches("^[0-9a-zA-Z &@()!:,+`\\-\\'\\.\\/^]{1,40}$")) {
-      accountName.take(40)
-    } else "NA"
-  }
-
-  def directDebitInstructionRequest(
-    vrn: String,
-    ddar: DirectDebitArrangementRequest
-  ): DirectDebitInstructionRequest =
-    DirectDebitInstructionRequest(
-      ddar.sortCode,
-      ddar.accountNumber,
-      fixAccountName(ddar.accountName),
-      paperAuddisFlag = false,
-      directDebitService
-        .createSeededDDIRef(vrn)
-        .fold(throw new RuntimeException("DDIRef cannot be generated"))(_.toString)
-    )
-
-  def paymentPlan(
-    vrn: String,
-    ddar: DirectDebitArrangementRequest,
-    startDate: LocalDate,
-    endDate: LocalDate
-  ): PaymentPlan = {
-    PaymentPlan(
-      "Time to Pay",
-      vrn,
-      "VNPS",
-      "GBP",
-      ddar.firstPaymentAmount.toString,
-      startDate,
-      ddar.scheduledPaymentAmount.toString,
-      startDate.withDayOfMonth(ddar.paymentDay).plusMonths(1),
-      endDate.withDayOfMonth(ddar.paymentDay).minusMonths(1),
-      "Calendar Monthly",
-      ddar.totalAmountToPay.toString,
-      endDate.withDayOfMonth(ddar.paymentDay),
-      ddar.scheduledPaymentAmount.toString
-    )
-  }
-
-  def getTtpArrangement(
-    startDate: LocalDate,
-    endDate: LocalDate,
-    ddar: DirectDebitArrangementRequest
-  ):TtpArrangement = {
-    val reviewDate = endDate.plusWeeks(3)
-
-    val dd: Seq[DebitDetails] = (0 until ddar.numberOfPayments).map {
-      month => {
-        DebitDetails("IN2", startDate.withDayOfMonth(ddar.paymentDay).plusMonths(month).toString)
-      }
-    }
-    TtpArrangement(
-      LocalDate.now.toString,
-      endDate.withDayOfMonth(ddar.paymentDay).toString,
-      startDate.toString,
-      ddar.firstPaymentAmount.toString,
-      ddar.scheduledPaymentAmount.toString,
-      "Monthly",
-      reviewDate.toString,
-      "ZZZ",
-      "Other",
-      directDebit = true,
-      dd.toList
-    )
-  }
-
-  def paymentPlanRequest(
-    vrn: String,
-    ddar: DirectDebitArrangementRequest,
-    startDate: LocalDate,
-    endDate: LocalDate
-  ): PaymentPlanRequest =
-    PaymentPlanRequest(
-      "VDNPS",
-      firstPaymentDateService.now.format(DateTimeFormatter.ISO_INSTANT),
-      Seq(KnownFact("VRN", vrn)),
-      directDebitInstructionRequest(vrn, ddar),
-      paymentPlan(vrn, ddar, startDate, endDate),
-      printFlag = false
-    )
-
+  def ddiRef(vrn: String) : String = directDebitService
+    .createSeededDDIRef(vrn)
+    .fold(throw new RuntimeException("DDIRef cannot be generated"))(_.toString)
 }
