@@ -38,13 +38,13 @@ class AppConfigSpec extends AnyWordSpec with Matchers {
       }
 
       "poaUsersEnabledFrom config setting is after to today" in {
-        appConfig(LocalDate.now.plusDays(1).toString).poaUsersEnabled shouldBe true
+        appConfig(LocalDate.now.minusDays(1).toString).poaUsersEnabled shouldBe true
       }
     }
 
     "not be enabled" when {
       "poaUsersEnabledFrom config setting is before today" in {
-        appConfig(LocalDate.now.minusDays(1).toString).poaUsersEnabled shouldBe false
+        appConfig(LocalDate.now.plusDays(1).toString).poaUsersEnabled shouldBe false
       }
 
       "poaUsersEnabledFrom config setting is empty" in {

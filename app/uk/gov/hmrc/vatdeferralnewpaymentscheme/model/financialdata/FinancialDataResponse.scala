@@ -19,8 +19,8 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.financialdata
 import play.api.libs.json.Json
 
 case class FinancialDataResponse(
-  originalAmount: String,
-  outstandingAmount: String
+  originalAmount: Option[BigDecimal],
+  outstandingAmount: BigDecimal
 )
 
 object FinancialDataResponse {

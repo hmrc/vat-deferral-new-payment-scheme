@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport
 
+import cats.implicits._
 import play.api.Logger
 import play.api.libs.json.Json
 import shapeless.syntax.typeable._
@@ -32,7 +33,15 @@ object PaymentOnAccount extends FileImportParser[PaymentOnAccount]  {
 
   def parse(line: String): PaymentOnAccount = {
     //  TODO: Discuss Validation
-    PaymentOnAccount(line, Some(BigDecimal(0))) // TODO
+    try {
+      val lineFields: Array[String] = line.split(",")
+      PaymentOnAccount(lineFields(0).trim, Some(BigDecimal(lineFields(1).trim)))
+    } catch {
+      case _:Throwable => {
+        logger.warn("File Import: PaymentOnAccount String is invalid")
+        PaymentOnAccount("error", none[BigDecimal])
+      }
+    }
   }
 
   def filter[A](item: A): Boolean = {

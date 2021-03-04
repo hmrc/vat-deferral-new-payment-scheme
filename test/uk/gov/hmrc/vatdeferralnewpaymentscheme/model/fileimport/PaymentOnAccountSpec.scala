@@ -25,10 +25,11 @@ class PaymentOnAccountSpec extends AnyWordSpec with Matchers with GuiceOneAppPer
   "PaymentOnAccount" should {
     "parse line correctly" in {
 
-      val line = "100000000"
+      val line = "100000000, 123.45"
       val paymentOnAccount = PaymentOnAccount.parse(line)
 
       paymentOnAccount.vrn shouldBe "100000000"
+      paymentOnAccount.outstandingAmount shouldBe Some(BigDecimal(123.45))
     }
   }
 }
