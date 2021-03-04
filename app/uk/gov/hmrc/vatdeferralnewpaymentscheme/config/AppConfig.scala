@@ -57,7 +57,7 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
     if (!config.has("poaUsersEnabledFrom")) false
     else {
       val poa = config.getOptional[String]("poaUsersEnabledFrom").getOrElse("")
-      if (poa.matches("^\\d{4}\\-(0[1-9]|1[012])\\-(0[1-9]|[12][0-9]|3[01])$")) !LocalDate.parse(poa).isBefore(LocalDate.now()) else false
+      if (poa.matches("^\\d{4}\\-(0[1-9]|1[012])\\-(0[1-9]|[12][0-9]|3[01])$")) !LocalDate.now().isBefore(LocalDate.parse(poa)) else false
     }
   }
 }

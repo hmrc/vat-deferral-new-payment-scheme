@@ -45,11 +45,12 @@ class FinancialDataController @Inject()(
     for {
       poa <- poaRepo.findOne(vrn)
       vmf <- vatMainframeRepo.findOne(vrn)
-      financialData <- if(appConfig.poaUsersEnabled & poa.nonEmpty) Future.successful(poa.fold(BigDecimal(0),BigDecimal(0))(x =>(x.outstandingAmount.getOrElse(BigDecimal(0)), x.outstandingAmount.getOrElse(BigDecimal(0)))))
-                       else if(vmf.nonEmpty) Future.successful(vmf.fold(BigDecimal(0),BigDecimal(0))(x =>(x.deferredCharges, x.deferredCharges - x.payments)))
-                       else financialDataService.getFinancialData(vrn)
+      financialData <- if(appConfig.poaUsersEnabled & poa.nonEmpty) Future.successful(poa.fold(None, BigDecimal(0))(x => (None, x.outstandingAmount.getOrElse(BigDecimal(0)))))
+                       else if(vmf.nonEmpty) Future.successful(vmf.fold(Some(BigDecimal(0)), BigDecimal(0))(x => (Some(x.deferredCharges), x.deferredCharges - x.payments)))
+                       else financialDataService.getFinancialData(vrn).map { a=>(Some(a._1), a._2) }
+
     } yield {
-      val fd = FinancialDataResponse(financialData._1.toString, financialData._2.toString)
+      val fd = FinancialDataResponse(financialData._1, financialData._2)
       val financialDataResponse = Json.toJson(fd).toString()
 
       logger.info("FinancialDataResponse was retrieved successfully")
