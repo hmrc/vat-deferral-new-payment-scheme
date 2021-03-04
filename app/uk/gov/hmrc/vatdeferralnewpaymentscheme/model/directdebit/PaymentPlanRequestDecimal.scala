@@ -18,6 +18,7 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit
 
 import play.api.libs.json.Json
 
+// TODO remove
 case class PaymentPlanRequestDecimal(
                                       requestingService:      String,
                                       submissionDateTime:     String,

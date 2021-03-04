@@ -18,13 +18,22 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.model
 
 import play.api.libs.json.Json
 
+import scala.math.BigDecimal.RoundingMode
+
 case class DirectDebitArrangementRequest(
   paymentDay: Int,
   numberOfPayments: Int,
   totalAmountToPay: BigDecimal,
   sortCode: String,
   accountNumber: String,
-  accountName: String)
+  accountName: String) {
+
+  def scheduledPaymentAmount: BigDecimal =
+    (totalAmountToPay / numberOfPayments).setScale(2, RoundingMode.DOWN)
+
+  def firstPaymentAmount: BigDecimal =
+    scheduledPaymentAmount + (totalAmountToPay - (scheduledPaymentAmount * numberOfPayments))
+}
 
 object DirectDebitArrangementRequest {
   implicit val format = Json.format[DirectDebitArrangementRequest]

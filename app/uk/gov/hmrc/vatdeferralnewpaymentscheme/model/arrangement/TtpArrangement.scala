@@ -15,22 +15,52 @@
  */
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement
+import java.time.LocalDate
+
 import play.api.libs.json.Json
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.DirectDebitArrangementRequest
+
 case class TtpArrangement(
-   startDate: String,
-   endDate: String,
-   firstPaymentDate: String,
-   firstPaymentAmount: String,
-   regularPaymentAmount: String,
-   regularPaymentFrequency: String,
-   reviewDate: String,
-   initials: String,
-   enforcementAction: String,
-   directDebit: Boolean,
-   debitDetails: List[DebitDetails],
-   note: String = "NA"
- )
+  startDate: String,
+  endDate: String,
+  firstPaymentDate: String,
+  firstPaymentAmount: String,
+  regularPaymentAmount: String,
+  reviewDate: String,
+  directDebit: Boolean,
+  debitDetails: List[DebitDetails],
+  regularPaymentFrequency: String = "Monthly",
+  initials: String = "ZZZ",
+  enforcementAction: String = "Other",
+  note: String = "NA"
+)
 
 object TtpArrangement {
+
+  def apply(
+    startDate: LocalDate,
+    endDate: LocalDate,
+    ddar: DirectDebitArrangementRequest
+  ): TtpArrangement = {
+
+    val reviewDate = endDate.plusWeeks(3)
+    val dd: Seq[DebitDetails] = (0 until ddar.numberOfPayments).map {
+      month => {
+        DebitDetails("IN2", startDate.withDayOfMonth(ddar.paymentDay).plusMonths(month).toString)
+      }
+    }
+
+    TtpArrangement(
+      LocalDate.now.toString,
+      endDate.withDayOfMonth(ddar.paymentDay).toString,
+      startDate.toString,
+      ddar.firstPaymentAmount.toString,
+      ddar.scheduledPaymentAmount.toString,
+      reviewDate.toString,
+      directDebit = true,
+      dd.toList
+    )
+  }
+
   implicit val format = Json.format[TtpArrangement]
 }

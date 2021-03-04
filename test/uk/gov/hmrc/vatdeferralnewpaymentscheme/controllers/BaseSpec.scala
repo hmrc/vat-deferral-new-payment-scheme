@@ -26,8 +26,8 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.DirectDebitGenService
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, PaymentPlanStore}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{DirectDebitGenService, FirstPaymentDateService}
 
 import scala.concurrent.ExecutionContext
 
@@ -35,7 +35,7 @@ class BaseSpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with M
 
   val fakeRequest   = FakeRequest("POST", "/")
   val env           = Environment.simple()
-  val configuration = Configuration.load(env)
+  val configuration = Configuration.load(env, Map("poaUsersEnabledFrom" -> "2021-03-08"))
   val serviceConfig = new ServicesConfig(configuration)
   val appConfig     = new AppConfig(configuration, serviceConfig)
   val cc            = Helpers.stubControllerComponents()
@@ -45,7 +45,10 @@ class BaseSpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with M
   implicit val auditConnector   = mock[AuditConnector]
 
   val ddService = app.injector.instanceOf[DirectDebitGenService]
+  val firstPaymentDateService = app.injector.instanceOf[FirstPaymentDateService]
   lazy val ppStore = mock[PaymentPlanStore]
+
+  lazy val paymentOnAccountRepo = mock[PaymentOnAccountRepo]
 
   def getConfig(key: String) = serviceConfig.getConfString(key, "")
   lazy val desEnvironment: String = getConfig("des-arrangement-service.environment")

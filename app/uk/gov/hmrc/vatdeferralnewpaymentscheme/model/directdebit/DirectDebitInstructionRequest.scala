@@ -17,6 +17,7 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit
 
 import play.api.libs.json.Json
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.DirectDebitArrangementRequest
 
 case class DirectDebitInstructionRequest(
   sortCode:        String,
@@ -27,5 +28,25 @@ case class DirectDebitInstructionRequest(
 )
 
 object DirectDebitInstructionRequest {
+
+  def fixAccountName(accountName: String): String = {
+    if (accountName.take(40).matches("^[0-9a-zA-Z &@()!:,+`\\-\\'\\.\\/^]{1,40}$")) {
+      accountName.take(40)
+    } else "NA"
+  }
+
+  def apply(
+    vrn: String,
+    ddar: DirectDebitArrangementRequest,
+    ddiRefNumber:    String
+  ): DirectDebitInstructionRequest =
+      DirectDebitInstructionRequest(
+      ddar.sortCode,
+      ddar.accountNumber,
+      fixAccountName(ddar.accountName),
+      paperAuddisFlag = false,
+      ddiRefNumber
+    )
+
   implicit val format = Json.format[DirectDebitInstructionRequest]
 }

@@ -22,6 +22,7 @@ import play.api.test.Helpers.{status, _}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.DesTimeToPayArrangementConnector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.DirectDebitArrangementRequest
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit.DirectDebitInstructionRequest
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.DesDirectDebitService
 
 class DirectDebitArrangementControllerSpec extends BaseSpec {
@@ -71,13 +72,13 @@ class DirectDebitArrangementControllerSpec extends BaseSpec {
       new FakeDesTimeToPayArrangementConnector(4001)
     )
     "replace an account name containing illegal char in first 40" in {
-      controller.fixAccountName("foo*") should be ("NA")
+      DirectDebitInstructionRequest.fixAccountName("foo*") should be ("NA")
     }
     "truncate account name where first 40 char are allowed" in {
-      controller.fixAccountName("0123456789 &@()!:,+`-'./^asdfgASDFGasdfg***") should be ("0123456789 &@()!:,+`-'./^asdfgASDFGasdfg")
+      DirectDebitInstructionRequest.fixAccountName("0123456789 &@()!:,+`-'./^asdfgASDFGasdfg***") should be ("0123456789 &@()!:,+`-'./^asdfgASDFGasdfg")
     }
     "pass through a shorter account name without illegal char verbatim" in {
-      controller.fixAccountName("foobar") should be ("foobar")
+      DirectDebitInstructionRequest.fixAccountName("foobar") should be ("foobar")
     }
   }
 
@@ -90,7 +91,8 @@ class DirectDebitArrangementControllerSpec extends BaseSpec {
     directDebitService,
     ttpConnector,
     ppStore,
-    ddService
+    ddService,
+    firstPaymentDateService
   )
 
 }

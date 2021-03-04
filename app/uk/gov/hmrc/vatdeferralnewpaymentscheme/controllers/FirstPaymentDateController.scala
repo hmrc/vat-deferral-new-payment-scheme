@@ -16,21 +16,24 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
-import java.time.{ZoneId, ZonedDateTime}
-
 import com.google.inject.Inject
 import javax.inject.Singleton
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.FirstPaymentDateService
+
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class FirstPaymentDateController @Inject()(
-  cc: ControllerComponents
+  cc: ControllerComponents,
+  firstPaymentDateService: FirstPaymentDateService
+)(
+  implicit executionContext: ExecutionContext
 ) extends BackendController(cc) {
 
-  def get: Action[AnyContent] = Action {
-    def now: ZonedDateTime = ZonedDateTime.now.withZoneSameInstant(ZoneId.of("Europe/London"))
-    Ok(Json.toJson(now.firstPaymentDate))
+  def get(vrn: String): Action[AnyContent] = Action.async {
+    firstPaymentDateService.get(vrn).map(x => Ok(Json.toJson(x)))
   }
 }
