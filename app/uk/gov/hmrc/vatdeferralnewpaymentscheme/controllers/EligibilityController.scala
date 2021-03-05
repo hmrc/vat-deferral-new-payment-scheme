@@ -21,12 +21,13 @@ import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesCacheConnector, DesConnector}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.eligibility.EligibilityResponse
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, PaymentPlanStore, TimeToPayRepo, VatMainframeRepo}
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.FinancialDataService
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{DesObligationsService, FinancialDataService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -35,7 +36,7 @@ class EligibilityController @Inject()(
   appConfig: AppConfig,
   cc: ControllerComponents,
   desConnector: DesConnector,
-  desCacheConnector: DesCacheConnector,
+  desObligationsService: DesObligationsService,
   financialDataService: FinancialDataService,
   paymentOnAccountRepo: PaymentOnAccountRepo,
   timeToPayRepo: TimeToPayRepo,
@@ -62,8 +63,8 @@ class EligibilityController @Inject()(
            else if(vmf.nonEmpty) Future.successful(vmf.fold(false)(_.outstandingExists))
            else financialDataService.getFinancialData(vrn).map(x => (x._1 + x._2) > 0)
       e <- if (!d) nof
-           else if (vmf.isEmpty) desConnector.getObligations(vrn).map(_.obligations.nonEmpty)
-           else cacheConnector.getVatCacheObligations(vrn).map(_.obligations.nonEmpty)
+           else if (vmf.isEmpty) desObligationsService.getObligationsFromDes(vrn)
+           else desObligationsService.getCacheObligationsFromDes(vrn)
     } yield EligibilityResponse(a, b, c, Some(e), d)).map { result =>
       logger.info("EligibilityResponse was retrieved successfully")
       Ok(Json.toJson(result).toString)

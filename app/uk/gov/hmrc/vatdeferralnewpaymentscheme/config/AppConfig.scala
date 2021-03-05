@@ -17,13 +17,18 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.config
 
 import javax.inject.{Inject, Singleton}
-import play.api.Configuration
+import play.api.{ConfigLoader, Configuration}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-
 import java.time.LocalDate
+
+import com.typesafe.config.Config
 
 @Singleton
 class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
+
+  implicit val dateConfigLoader: ConfigLoader[LocalDate] = (config: Config, path: String) => {
+    LocalDate.parse(config.getString(path))
+  }
 
   val authBaseUrl: String = servicesConfig.baseUrl("auth")
 
@@ -47,6 +52,9 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   val vmfFilename: String = config.get[String]("schedulers.fileImport.legacyMainframe.filename")
 
   lazy val getObligationsPath: String = config.get[String]("microservice.services.des-service.getObligationsPath")
+  lazy val obligationsDateRangeFrom: LocalDate = config.get[LocalDate]("microservice.services.des-service.obligationsDateRangeFrom")
+  lazy val obligationsDateRangeTo: LocalDate = config.get[LocalDate]("microservice.services.des-service.obligationsDateRangeTo")
+
   lazy val getFinancialDataPath: String = config.get[String]("microservice.services.des-service.getFinancialDataPath")
 
   lazy val getVatCacheObligationsPath: String = config.get[String]("microservice.services.des-cache-service.getVatCacheObligationsPath")
