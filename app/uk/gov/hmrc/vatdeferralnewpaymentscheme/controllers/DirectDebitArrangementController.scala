@@ -73,12 +73,12 @@ class DirectDebitArrangementController @Inject()(
           ttpa = TtpArrangement(startDate, endDate, ddar)
           arrangement = TimeToPayArrangementRequest(ttpa, letterAndControl)
           a <- desDirectDebitService.createPaymentPlan(ppr, vrn)
+          _ = if (a.isRight) paymentPlanStore.add(vrn)
           b <- if (a.isRight) desTimeToPayArrangementConnector.createArrangement(vrn, arrangement)
                else Future.successful(Left(UpstreamErrorResponse("fake error", 418)))
         } yield {
           (a,b) match {
             case (Right(ppr:PaymentPlanReference), Right(y)) if y.status == 202 =>
-              paymentPlanStore.add(vrn)
               audit[PaymentPlanReference](
                 "CreatePaymentPlanSuccess",
                 ppr
@@ -94,7 +94,6 @@ class DirectDebitArrangementController @Inject()(
               logger.info("createPaymentPlan and createArrangement has been successful")
               Created
             case (Right(ppr:PaymentPlanReference), Left(e)) =>
-              paymentPlanStore.add(vrn)
               logger.warn(s"unable to set up time to pay arrangement for $vrn, error response: ${e.message}")
               audit[PaymentPlanReference](
                 "CreatePaymentPlanSuccess",
