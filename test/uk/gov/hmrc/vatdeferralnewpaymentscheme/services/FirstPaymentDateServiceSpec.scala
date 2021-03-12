@@ -22,6 +22,7 @@ import java.time.{LocalDateTime, ZoneId, ZonedDateTime}
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.BaseSpec
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.FirstPaymentDateServiceImpl
 
 import scala.concurrent.Future
@@ -58,17 +59,19 @@ class FirstPaymentDateServiceSpec extends BaseSpec {
   }
 
   val firstPoaDate: ZonedDateTime = zonedDateTime(2021, 3, 24)
+  val earlierFirstPaymentDate: ZonedDateTime = zonedDateTime(2021, 1, 1)
+  val laterFirstPaymentDate: ZonedDateTime = zonedDateTime(2021, 4, 1)
 
-  "first payment date" should {
+  "first payment date for a POA user" should {
 
-    "be firstPoaDate" in {
-      val date = await(service(firstPoaDate).get("foo"))
+    s"be $firstPoaDate when $earlierFirstPaymentDate is before $firstPoaDate" in {
+      val date = await(service(earlierFirstPaymentDate).get("foo"))
       date shouldBe firstPoaDate
     }
 
-    "not be firstPoaDate" in {
+    s"be ${laterFirstPaymentDate.firstPaymentDate} when ${laterFirstPaymentDate.firstPaymentDate} is after $firstPoaDate" in {
       val date = await(service(zonedDateTime(2021, 4, 1)).get("foo"))
-      date.isAfter(firstPoaDate) shouldBe false
+      date shouldBe laterFirstPaymentDate.firstPaymentDate
     }
   }
 
