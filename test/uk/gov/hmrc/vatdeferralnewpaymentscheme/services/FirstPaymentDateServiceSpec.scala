@@ -67,9 +67,8 @@ class FirstPaymentDateServiceSpec extends BaseSpec {
       }
     }
     "not be firstPoaDate" in {
-      service(zonedDateTime(2021, 4, 1)).get("foo").map { date =>
-        date.isAfter(firstPoaDate) shouldBe true
-      }
+      val date = await(service(zonedDateTime(2021, 4, 1)).get("foo"))
+      date.isAfter(firstPoaDate) shouldBe false
     }
   }
 

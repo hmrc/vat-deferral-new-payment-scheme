@@ -27,15 +27,20 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[InstallmentsServiceImpl])
 trait InstallmentsService {
 
-  val finalPaymentDate: LocalDate = LocalDate.parse("2022-03-22") // TODO check and consider config
+  val finalPaymentDate: LocalDate = LocalDate.parse("2022-01-24")
   val monthlyPaymentLimit = BigDecimal(20000000)
 
   def installmentMonthsRemaining(vrn: String): Future[Int]
 
   def canPay(vrn: String, amount: BigDecimal): Future[Boolean]
 
-  def monthsBetween(a: LocalDate, b: LocalDate): Int =
-    Period.between(a,b).toTotalMonths.toInt
+  def installmentMonthsBetween(a: LocalDate, b: LocalDate): Int = {
+    val period = Period.between(
+      a,
+      b.plusDays(1) // n.b. the first date is inclusive, the second exclusive
+    )
+    period.toTotalMonths.toInt + scala.math.min(period.getDays, 1)
+  }
 
   @tailrec
   final def minInstallments(installments: Int, amount: BigDecimal): Int = {
@@ -52,7 +57,7 @@ class InstallmentsServiceImpl @Inject()(
 
   override def installmentMonthsRemaining(vrn: String): Future[Int] =
     firstPaymentDateService.get(vrn).map { firstPaymentDate =>
-      monthsBetween(firstPaymentDate.toLocalDate, finalPaymentDate)
+      installmentMonthsBetween(firstPaymentDate.toLocalDate, finalPaymentDate)
     }
 
   override def canPay(vrn: String, amount: BigDecimal): Future[Boolean] =
