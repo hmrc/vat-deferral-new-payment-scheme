@@ -26,7 +26,6 @@ class InstallmentsServiceSpec extends BaseSpec {
   def service: InstallmentsServiceImpl = new InstallmentsServiceImpl(firstPaymentDateService)
 
   val vrn = "1000000000"
-  val twentyMillion: BigDecimal = 20000000
 
   "installmentsMonthsBetween" should {
     "return 11 for firstPaymentDate of 24th of March 2021" in {
@@ -51,8 +50,8 @@ class InstallmentsServiceSpec extends BaseSpec {
   }
 
   "minInstallments" should {
-    s"return 11 installments for ${twentyMillion * 11}" in {
-      val result = service.minInstallments(11, twentyMillion * 11)
+    s"return 11 installments for ${service.monthlyPaymentLimit * 11}" in {
+      val result = service.minInstallments(11, service.monthlyPaymentLimit * 11)
       result shouldBe 11
     }
 
@@ -61,13 +60,13 @@ class InstallmentsServiceSpec extends BaseSpec {
       result shouldBe 1
     }
 
-    s"return 6 installments for ${twentyMillion * 6}" in {
-      val result = service.minInstallments(11, twentyMillion * 6)
+    s"return 6 installments for ${service.monthlyPaymentLimit * 6}" in {
+      val result = service.minInstallments(11, service.monthlyPaymentLimit * 6)
       result shouldBe 6
     }
 
-    s"return 7 installments for ${twentyMillion * 6 + 50}" in {
-      val result = service.minInstallments(11, twentyMillion * 6 + 50)
+    s"return 7 installments for ${service.monthlyPaymentLimit * 6 + 50}" in {
+      val result = service.minInstallments(11, service.monthlyPaymentLimit * 6 + 50)
       result shouldBe 7
     }
   }
