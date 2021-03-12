@@ -30,11 +30,11 @@ class FirstPaymentDateServiceSpec extends BaseSpec {
 
   when(paymentOnAccountRepo.exists(any())).thenReturn(Future.successful(true))
 
-  def service(zonedDateTime: ZonedDateTime) = new FirstPaymentDateServiceImpl(
+  def service(zdt: ZonedDateTime) = new FirstPaymentDateServiceImpl(
     paymentOnAccountRepo,
     appConfig
   ) {
-    override def now: ZonedDateTime = zonedDateTime
+    override def now: ZonedDateTime = zdt
   }
 
   val zoneId: ZoneId = ZoneId.of("Europe/London")
@@ -57,15 +57,15 @@ class FirstPaymentDateServiceSpec extends BaseSpec {
     )
   }
 
-  val firstPoaDate: ZonedDateTime =
-    zonedDateTime(2021, 3, 24)
+  val firstPoaDate: ZonedDateTime = zonedDateTime(2021, 3, 24)
 
   "first payment date" should {
+
     "be firstPoaDate" in {
-      service(firstPoaDate).get("foo").map { date =>
-        date shouldBe firstPoaDate
-      }
+      val date = await(service(firstPoaDate).get("foo"))
+      date shouldBe firstPoaDate
     }
+
     "not be firstPoaDate" in {
       val date = await(service(zonedDateTime(2021, 4, 1)).get("foo"))
       date.isAfter(firstPoaDate) shouldBe false

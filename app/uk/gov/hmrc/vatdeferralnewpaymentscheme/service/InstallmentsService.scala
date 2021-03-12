@@ -44,7 +44,7 @@ trait InstallmentsService {
 
   @tailrec
   final def minInstallments(installments: Int, amount: BigDecimal): Int = {
-    if(installments == 0 || amount/installments >= monthlyPaymentLimit) installments +1
+    if(installments == 0 || amount/installments > monthlyPaymentLimit) installments +1
     else minInstallments(installments -1, amount)
   }
 }
