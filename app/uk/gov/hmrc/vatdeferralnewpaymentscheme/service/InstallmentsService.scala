@@ -30,7 +30,7 @@ trait InstallmentsService {
   val finalPaymentDate: LocalDate = LocalDate.parse("2022-01-24")
   val monthlyPaymentLimit = BigDecimal(20000000)
 
-  def installmentMonthsRemaining(vrn: String): Future[Int]
+  def installmentPeriodsAvailable(vrn: String): Future[Int]
 
   def canPay(vrn: String, amount: BigDecimal): Future[Boolean]
 
@@ -55,12 +55,12 @@ class InstallmentsServiceImpl @Inject()(
   implicit executionContext: ExecutionContext
 ) extends InstallmentsService {
 
-  override def installmentMonthsRemaining(vrn: String): Future[Int] =
+  override def installmentPeriodsAvailable(vrn: String): Future[Int] =
     firstPaymentDateService.get(vrn).map { firstPaymentDate =>
       installmentMonthsBetween(firstPaymentDate.toLocalDate, finalPaymentDate)
     }
 
   override def canPay(vrn: String, amount: BigDecimal): Future[Boolean] =
-    installmentMonthsRemaining(vrn).map(x => amount/x <= monthlyPaymentLimit) // TODO need to know if this is < or <= e.g. is 20m okay
+    installmentPeriodsAvailable(vrn).map(x => amount/x <= monthlyPaymentLimit) // TODO need to know if this is < or <= e.g. is 20m okay
 
 }

@@ -40,7 +40,7 @@ class InstallmentsController@Inject()(
 
   def installmentsAvailable(vrn: String, amount: String): Action[AnyContent] = Action.async {
     for {
-      max <- installmentsService.installmentMonthsRemaining(vrn)
+      max <- installmentsService.installmentPeriodsAvailable(vrn)
       min = installmentsService.minInstallments(max, BigDecimal(amount))
     } yield Ok(Json.toJson(InstallmentsAvailable(min, max.toInt)))
   }
