@@ -27,7 +27,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[InstallmentsServiceImpl])
 trait InstallmentsService {
 
-  val finalPaymentDate: LocalDate = LocalDate.parse("2022-01-24")
+  val finalPaymentDate: LocalDate = LocalDate.parse("2022-01-28")
   val monthlyPaymentLimit = BigDecimal(20000000)
 
   def installmentPeriodsAvailable(vrn: String): Future[Int]
