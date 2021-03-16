@@ -22,6 +22,7 @@ import java.time.{LocalDateTime, ZoneId, ZonedDateTime}
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.BaseSpec
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.FirstPaymentDateServiceImpl
 
 import scala.concurrent.Future
@@ -30,11 +31,11 @@ class FirstPaymentDateServiceSpec extends BaseSpec {
 
   when(paymentOnAccountRepo.exists(any())).thenReturn(Future.successful(true))
 
-  def service(zonedDateTime: ZonedDateTime) = new FirstPaymentDateServiceImpl(
+  def service(zdt: ZonedDateTime) = new FirstPaymentDateServiceImpl(
     paymentOnAccountRepo,
     appConfig
   ) {
-    override def now: ZonedDateTime = zonedDateTime
+    override def now: ZonedDateTime = zdt
   }
 
   val zoneId: ZoneId = ZoneId.of("Europe/London")
@@ -57,19 +58,20 @@ class FirstPaymentDateServiceSpec extends BaseSpec {
     )
   }
 
-  val firstPoaDate: ZonedDateTime =
-    zonedDateTime(2021, 3, 24)
+  val firstPoaDate: ZonedDateTime = zonedDateTime(2021, 3, 24)
+  val earlierFirstPaymentDate: ZonedDateTime = zonedDateTime(2021, 1, 1)
+  val laterFirstPaymentDate: ZonedDateTime = zonedDateTime(2021, 4, 1)
 
-  "first payment date" should {
-    "be firstPoaDate" in {
-      service(firstPoaDate).get("foo").map { date =>
-        date shouldBe firstPoaDate
-      }
+  "first payment date for a POA user" should {
+
+    s"be $firstPoaDate when $earlierFirstPaymentDate is before $firstPoaDate" in {
+      val date = await(service(earlierFirstPaymentDate).get("foo"))
+      date shouldBe firstPoaDate
     }
-    "not be firstPoaDate" in {
-      service(zonedDateTime(2021, 4, 1)).get("foo").map { date =>
-        date.isAfter(firstPoaDate) shouldBe true
-      }
+
+    s"be ${laterFirstPaymentDate.firstPaymentDate} when ${laterFirstPaymentDate.firstPaymentDate} is after $firstPoaDate" in {
+      val date = await(service(zonedDateTime(2021, 4, 1)).get("foo"))
+      date shouldBe laterFirstPaymentDate.firstPaymentDate
     }
   }
 
