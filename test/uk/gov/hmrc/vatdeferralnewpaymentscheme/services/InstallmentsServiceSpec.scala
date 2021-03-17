@@ -33,12 +33,12 @@ class InstallmentsServiceSpec extends BaseSpec {
       result shouldBe 11
     }
 
-    "return 10 for firstPaymentDate of 29th of March 2021" in {
-      val result = service.installmentMonthsBetween(LocalDate.parse("2021-03-29"), service.finalPaymentDate)
-      result shouldBe 10
+    "return 11 for firstPaymentDate of 31st of March 2021" in {
+      val result = service.installmentMonthsBetween(LocalDate.parse("2021-03-31"), service.finalPaymentDate)
+      result shouldBe 11
     }
 
-    "return 10 for firstPaymentDate of 1st of March 2021" in {
+    "return 11 for firstPaymentDate of 1st of March 2021" in {
       val result = service.installmentMonthsBetween(LocalDate.parse("2021-03-01"), service.finalPaymentDate)
       result shouldBe 11
     }
