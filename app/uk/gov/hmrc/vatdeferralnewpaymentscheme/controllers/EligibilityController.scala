@@ -21,11 +21,12 @@ import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesCacheConnector, DesConnector}
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.eligibility.EligibilityResponse
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.eligibility._
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.{PaymentOnAccount, VatMainframe}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, PaymentPlanStore, TimeToPayRepo, VatMainframeRepo}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{DesObligationsService, FinancialDataService}
 
@@ -50,22 +51,35 @@ class EligibilityController @Inject()(
   val logger = Logger(getClass)
   val nof: Future[Boolean] = Future.successful(false)
 
+  def tryPoaObligations(vrn: String): Future[Boolean] = {
+    try {
+      desObligationsService.getObligationsFromDes(vrn)
+    } catch {
+      case e@UpstreamErrorResponse(msg, 403, _, _) if msg.contains("NOT_FOUND_BPKEY") =>
+        logger.info(s"Got error from getObligationsFromDes$e")
+        logger.info(s"Trying getCacheObligationsFromDes")
+        desObligationsService.getCacheObligationsFromDes(vrn)
+      case e:Exception =>
+        logger.warn(s"Unexpected error $e")
+        throw e
+    }
+  }
+
   def get(vrn: String): Action[AnyContent] = Action.async {
     (for {
       a <- paymentPlanStore.exists(vrn)
-      poaUserEnabled = appConfig.poaUsersEnabled
-      b <- if (a || poaUserEnabled) nof else paymentOnAccountRepo.exists(vrn)
-      c <- if (a || b) nof else timeToPayRepo.exists(vrn)
-      poa <- paymentOnAccountRepo.findOne(vrn)
-      vmf <- vatMainframeRepo.findOne(vrn)
-      d <- if (a || b || c ) nof
+      c <- if (a) nof else timeToPayRepo.exists(vrn)
+      poa <- if (a || c) Future.successful(Option.empty[PaymentOnAccount]) else paymentOnAccountRepo.findOne(vrn)
+      vmf <- if (a || c) Future.successful(Option.empty[VatMainframe]) else vatMainframeRepo.findOne(vrn)
+      d <- if (a || c ) nof
            else if(poa.nonEmpty) Future.successful(poa.fold(false)(_.outstandingExists))
            else if(vmf.nonEmpty) Future.successful(vmf.fold(false)(_.outstandingExists))
            else financialDataService.getFinancialData(vrn).map(x => (x._1 + x._2) > 0)
       e <- if (!d) nof
+           else if (poa.nonEmpty) tryPoaObligations(vrn)
            else if (vmf.isEmpty) desObligationsService.getObligationsFromDes(vrn)
            else desObligationsService.getCacheObligationsFromDes(vrn)
-    } yield EligibilityResponse(a, b, c, Some(e), d)).map { result =>
+    } yield EligibilityResponse(a, false, c, Some(e), d)).map { result =>
       logger.info("EligibilityResponse was retrieved successfully")
       Ok(Json.toJson(result).toString)
     }
