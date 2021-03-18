@@ -87,6 +87,8 @@ class FirstPaymentDateSpec extends AnyWordSpec with Matchers {
         assertDates("2021-04-23", "2021-05-04")
         assertDates("2021-05-20", "2021-06-01")
         assertDates("2021-05-21", "2021-06-01")
+        assertDates("2021-05-22", "2021-06-01")
+        assertDates("2021-05-23", "2021-06-01")
       }
     }
 
