@@ -76,6 +76,22 @@ class FirstPaymentDateSpec extends AnyWordSpec with Matchers {
       }
     }
 
+    "A week from today is an HMRC excluded" should {
+      "be the following working day" in {
+        assertDates("2021-03-20", "2021-04-01")
+        assertDates("2021-03-21", "2021-04-01")
+        assertDates("2021-03-22", "2021-04-01")
+        assertDates("2021-03-23", "2021-04-01")
+        assertDates("2021-03-24", "2021-04-01")
+        assertDates("2021-04-22", "2021-05-04")
+        assertDates("2021-04-23", "2021-05-04")
+        assertDates("2021-05-20", "2021-06-01")
+        assertDates("2021-05-21", "2021-06-01")
+        assertDates("2021-05-22", "2021-06-01")
+        assertDates("2021-05-23", "2021-06-01")
+      }
+    }
+
     def parse(date: String): ZonedDateTime =
       ZonedDateTime.of(LocalDateTime.parse(date + "T10:00:00"), ZoneId.of("Europe/London"))
 
