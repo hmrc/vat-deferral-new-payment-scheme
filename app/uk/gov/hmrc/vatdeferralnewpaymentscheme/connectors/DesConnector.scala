@@ -16,21 +16,29 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors
 
+import com.google.inject.ImplementedBy
 import javax.inject.Inject
 import play.api.Logger
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, NotFoundException}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, NotFoundException, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.financialdata.{FinancialData, FinancialTransactions}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.obligations.{ObligationData, Obligations}
 
 import scala.concurrent.{ExecutionContext, Future}
+@ImplementedBy(classOf[DesConnectorImpl])
+trait DesConnector {
 
-class DesConnector @Inject() (
+  def getObligations(vrn: String): Future[Either[UpstreamErrorResponse, ObligationData]]
+
+  def getFinancialData(vrn: String): Future[FinancialData]
+}
+
+class DesConnectorImpl @Inject() (
   http: HttpClient,
   servicesConfig: ServicesConfig,
   appConfig: AppConfig
-)(implicit ec: ExecutionContext) {
+)(implicit ec: ExecutionContext) extends DesConnector {
 
   val logger = Logger(getClass)
 
@@ -43,12 +51,15 @@ class DesConnector @Inject() (
   val headers = Seq("Authorization" -> authorizationToken, "Environment" -> environment)
   implicit val headerCarrier: HeaderCarrier = HeaderCarrier(extraHeaders = headers)
 
-  def getObligations(vrn: String): Future[ObligationData] = {
+  import uk.gov.hmrc.http.HttpReadsInstances._
+
+  def getObligations(vrn: String): Future[Either[UpstreamErrorResponse, ObligationData]] = {
     val url: String = s"$serviceURL/${appConfig.getObligationsPath.replace("$vrn", vrn)}"
-    http.GET[ObligationData](url) recover {
-      case _: NotFoundException =>
+    http.GET[Either[UpstreamErrorResponse, ObligationData]](url) map {
+      case Left(UpstreamErrorResponse(_, 404, _, _)) =>
         logger.info("No Obligations found")
-        ObligationData(List.empty[Obligations])
+        Right(ObligationData(List.empty[Obligations]))
+      case obl => obl
     }
   }
 

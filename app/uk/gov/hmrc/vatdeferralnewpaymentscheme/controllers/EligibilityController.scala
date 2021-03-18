@@ -51,16 +51,24 @@ class EligibilityController @Inject()(
   val logger = Logger(getClass)
   val nof: Future[Boolean] = Future.successful(false)
 
-  def tryPoaObligations(vrn: String): Future[Boolean] = {
-    try {
-      desObligationsService.getObligationsFromDes(vrn)
-    } catch {
-      case e@UpstreamErrorResponse(msg, 403, _, _) if msg.contains("NOT_FOUND_BPKEY") =>
+  def poaObligations(vrn: String): Future[Boolean] = {
+    desObligationsService.getObligationsFromDes(vrn).flatMap {
+      case Right(isObl) => Future.successful(isObl)
+      case e@Left(UpstreamErrorResponse(msg, 403, _, _)) if msg.contains("NOT_FOUND_BPKEY") =>
         logger.info(s"Got error from getObligationsFromDes$e")
         logger.info(s"Trying getCacheObligationsFromDes")
         desObligationsService.getCacheObligationsFromDes(vrn)
-      case e:Exception =>
+      case Left(e) =>
         logger.warn(s"Unexpected error $e")
+        throw e
+    }
+  }
+
+  def extractObligations(vrn: String) : Future[Boolean] = {
+    desObligationsService.getObligationsFromDes(vrn).map {
+      case Right(isObl) => isObl
+      case Left(e) =>
+        logger.warn(s"Unexpected error from extract of etmp $e")
         throw e
     }
   }
@@ -76,8 +84,8 @@ class EligibilityController @Inject()(
            else if(vmf.nonEmpty) Future.successful(vmf.fold(false)(_.outstandingExists))
            else financialDataService.getFinancialData(vrn).map(x => (x._1 + x._2) > 0)
       e <- if (!d) nof
-           else if (poa.nonEmpty) tryPoaObligations(vrn)
-           else if (vmf.isEmpty) desObligationsService.getObligationsFromDes(vrn)
+           else if (poa.nonEmpty) poaObligations(vrn)
+           else if (vmf.isEmpty) extractObligations(vrn)
            else desObligationsService.getCacheObligationsFromDes(vrn)
     } yield EligibilityResponse(a, false, c, Some(e), d)).map { result =>
       logger.info("EligibilityResponse was retrieved successfully")

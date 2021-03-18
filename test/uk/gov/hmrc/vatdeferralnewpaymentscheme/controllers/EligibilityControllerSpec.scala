@@ -22,7 +22,7 @@ import org.scalatest.Assertion
 import play.api.mvc.{ControllerComponents, Result}
 import play.api.libs.json.Json
 import play.api.test.Helpers._
-import uk.gov.hmrc.http.{Upstream4xxResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesCacheConnector, DesConnector}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.eligibility.EligibilityResponse
@@ -59,7 +59,7 @@ class EligibilityControllerSpec extends BaseSpec {
       when(paymentPlanStore.exists(any())).thenReturn(Future.successful(false))
       when(timeToPayRepo.exists(any())).thenReturn(Future.successful(false))
       when(paymentOnAccountRepo.findOne(any())).thenReturn(Future.successful(Some(PaymentOnAccount("foo",Some(200.00)))))
-      when(desObligationsService.getObligationsFromDes(any())).thenReturn(Future.successful(false))
+      when(desObligationsService.getObligationsFromDes(any())).thenReturn(Future.successful(Right(false)))
       val result = testController.get(any())(fakeGet)
       status(result) shouldBe OK
       resultEq(result, EligibilityResponse(None,None,None,Some(false),Some(true)))
@@ -69,7 +69,7 @@ class EligibilityControllerSpec extends BaseSpec {
       when(paymentPlanStore.exists(any())).thenReturn(Future.successful(false))
       when(timeToPayRepo.exists(any())).thenReturn(Future.successful(false))
       when(paymentOnAccountRepo.findOne(any())).thenReturn(Future.successful(Some(PaymentOnAccount("foo",Some(0.00)))))
-      when(desObligationsService.getObligationsFromDes(any())).thenReturn(Future.successful(false))
+      when(desObligationsService.getObligationsFromDes(any())).thenReturn(Future.successful(Right(false)))
       val result = testController.get(any())(fakeGet)
       status(result) shouldBe OK
       resultEq(result, EligibilityResponse(None,None,None,Some(false),None))
@@ -79,7 +79,7 @@ class EligibilityControllerSpec extends BaseSpec {
       when(paymentPlanStore.exists(any())).thenReturn(Future.successful(false))
       when(timeToPayRepo.exists(any())).thenReturn(Future.successful(false))
       when(paymentOnAccountRepo.findOne(any())).thenReturn(Future.successful(Some(PaymentOnAccount("foo",Some(200.00)))))
-      when(desObligationsService.getObligationsFromDes(any())).thenReturn(Future.successful(true))
+      when(desObligationsService.getObligationsFromDes(any())).thenReturn(Future.successful(Right(true)))
       val result = testController.get(any())(fakeGet)
       status(result) shouldBe OK
       resultEq(result, EligibilityResponse(None,None,None,Some(true),Some(true)))
@@ -118,16 +118,27 @@ class EligibilityControllerSpec extends BaseSpec {
       resultEq(result, EligibilityResponse(None,None,None,Some(true),Some(true)))
     }
 
-//    "failover and return eligible for poa when etmp returns 403 NOT_FOUND_BPKEY" in {
-//      when(paymentPlanStore.exists(any())).thenReturn(Future.successful(false))
-//      when(timeToPayRepo.exists(any())).thenReturn(Future.successful(false))
-//      when(paymentOnAccountRepo.findOne(any())).thenReturn(Future.successful(Some(PaymentOnAccount("foo",Some(200.00)))))
-//      when(desObligationsService.getObligationsFromDes(any())).thenThrow(UpstreamErrorResponse("NOT_FOUND_BPKEY", 403))
-//      when(desObligationsService.getCacheObligationsFromDes(any())).thenReturn(Future.successful(false))
-//      val result = testController.get(any())(fakeGet)
-//      status(result) shouldBe OK
-//      resultEq(result, EligibilityResponse(None,None,None,Some(true),Some(true)))
-//    }
+    "failover and return eligible for poa when etmp returns 403 NOT_FOUND_BPKEY" in {
+      when(paymentPlanStore.exists(any())).thenReturn(Future.successful(false))
+      when(timeToPayRepo.exists(any())).thenReturn(Future.successful(false))
+      when(paymentOnAccountRepo.findOne(any())).thenReturn(Future.successful(Some(PaymentOnAccount("foo",Some(200.00)))))
+      when(desObligationsService.getObligationsFromDes(any())).thenReturn(Future.successful(Left(UpstreamErrorResponse("NOT_FOUND_BPKEY", 403))))
+      when(desObligationsService.getCacheObligationsFromDes(any())).thenReturn(Future.successful(false))
+      val result = testController.get(any())(fakeGet)
+      status(result) shouldBe OK
+      resultEq(result, EligibilityResponse(None,None,None,Some(false),Some(true)))
+    }
+
+    "not failover and return eligible for poa when etmp returns false" in {
+      when(paymentPlanStore.exists(any())).thenReturn(Future.successful(false))
+      when(timeToPayRepo.exists(any())).thenReturn(Future.successful(false))
+      when(paymentOnAccountRepo.findOne(any())).thenReturn(Future.successful(Some(PaymentOnAccount("foo",Some(200.00)))))
+      when(desObligationsService.getObligationsFromDes(any())).thenReturn(Future.successful(Right(false)))
+      when(desObligationsService.getCacheObligationsFromDes(any())).thenReturn(Future.successful(true))
+      val result = testController.get(any())(fakeGet)
+      status(result) shouldBe OK
+      resultEq(result, EligibilityResponse(None,None,None,Some(false),Some(true)))
+    }
 
   }
 
