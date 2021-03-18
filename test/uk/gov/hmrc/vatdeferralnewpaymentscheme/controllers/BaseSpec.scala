@@ -30,7 +30,8 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesCacheConnector, De
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, PaymentPlanStore, TimeToPayRepo, VatMainframeRepo}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{DesObligationsService, DirectDebitGenService, FinancialDataService, FirstPaymentDateService}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 class BaseSpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with MockitoSugar {
 
@@ -62,4 +63,6 @@ class BaseSpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with M
   lazy val desEnvironment: String = getConfig("des-arrangement-service.environment")
   lazy val authorizationToken: String = s"Bearer ${getConfig("des-arrangement-service.authorization-token")}"
 
+  implicit val defaultTimeout: FiniteDuration = 5 seconds
+  def await[A](future: Future[A])(implicit timeout: Duration): A = Await.result(future, timeout)
 }
