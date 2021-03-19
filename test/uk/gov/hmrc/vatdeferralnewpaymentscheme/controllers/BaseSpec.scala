@@ -28,7 +28,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesCacheConnector, DesConnector}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, PaymentPlanStore, TimeToPayRepo, VatMainframeRepo}
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{DesObligationsService, DirectDebitGenService, FinancialDataService, FirstPaymentDateService}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.service._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -49,6 +49,7 @@ class BaseSpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with M
 
   val ddService = app.injector.instanceOf[DirectDebitGenService]
   val firstPaymentDateService = app.injector.instanceOf[FirstPaymentDateService]
+  val installmentsService = app.injector.instanceOf[InstallmentsService]
 
   lazy val paymentPlanStore = mock[PaymentPlanStore]
   lazy val paymentOnAccountRepo = mock[PaymentOnAccountRepo]
