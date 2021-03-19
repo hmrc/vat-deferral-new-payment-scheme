@@ -18,6 +18,7 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
 import java.time.format.DateTimeFormatter
 
+import cats.implicits._
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.JsValue
@@ -31,7 +32,7 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.{DirectDebitArrangementRequest, TtpArrangementAuditWrapper}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{DesDirectDebitService, DirectDebitGenService, FirstPaymentDateService}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{DesDirectDebitService, DirectDebitGenService, FirstPaymentDateService, InstallmentsService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -43,7 +44,8 @@ class DirectDebitArrangementController @Inject()(
   desTimeToPayArrangementConnector: DesTimeToPayArrangementConnector,
   paymentPlanStore: PaymentPlanStore,
   directDebitService: DirectDebitGenService,
-  firstPaymentDateService: FirstPaymentDateService
+  firstPaymentDateService: FirstPaymentDateService,
+  installmentsService: InstallmentsService
 )(
   implicit ec: ExecutionContext,
   auditConnector: AuditConnector
@@ -62,6 +64,18 @@ class DirectDebitArrangementController @Inject()(
         for {
           startDate <- firstPaymentDateService.get(vrn).map(_.toLocalDate)
           endDate = startDate.plusMonths(ddar.numberOfPayments - 1)
+          maxInstallments <- installmentsService.installmentPeriodsAvailable(vrn)
+          _ = if (maxInstallments < ddar.numberOfPayments) {
+                 logger.warn(s"someone has too many installments: maxInstallment $maxInstallments, requested: ${ddar.numberOfPayments}")
+                 auditConnector.sendExplicitAudit(
+                   "CreatePaymentPlanFailure",
+                   Map(
+                     "maxInstallments" -> maxInstallments,
+                     "requested" -> ddar.numberOfPayments
+                   )
+                 )
+                throw new IllegalArgumentException(s"Too many installments requested; available: $maxInstallments, requested: ${ddar.numberOfPayments} ")
+              }
           ppr = PaymentPlanRequest(
                   vrn,
                   ddar,

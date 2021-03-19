@@ -67,10 +67,6 @@ class DirectDebitArrangementControllerSpec extends BaseSpec {
   }
 
   "fixAccountName" should {
-    val controller = testController(
-      new FakeDesDirectDebitService(201),
-      new FakeDesTimeToPayArrangementConnector(4001)
-    )
     "replace an account name containing illegal char in first 40" in {
       DirectDebitInstructionRequest.fixAccountName("foo*") should be ("NA")
     }
@@ -92,7 +88,8 @@ class DirectDebitArrangementControllerSpec extends BaseSpec {
     ttpConnector,
     paymentPlanStore,
     ddService,
-    firstPaymentDateService
+    firstPaymentDateService,
+    installmentsService
   )
 
 }
