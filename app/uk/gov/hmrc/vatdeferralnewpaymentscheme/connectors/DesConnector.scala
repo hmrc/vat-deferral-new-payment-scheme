@@ -51,7 +51,7 @@ class DesConnectorImpl @Inject() (
   val headers = Seq("Authorization" -> authorizationToken, "Environment" -> environment)
   implicit val headerCarrier: HeaderCarrier = HeaderCarrier(extraHeaders = headers)
 
-  import uk.gov.hmrc.http.HttpReadsInstances._
+  import uk.gov.hmrc.http.HttpReadsInstances.readEitherOf
   def getObligations(vrn: String): Future[Either[UpstreamErrorResponse, ObligationData]] = {
     val url: String = s"$serviceURL/${appConfig.getObligationsPath.replace("$vrn", vrn)}"
     http.GET[Either[UpstreamErrorResponse, ObligationData]](url) map {
