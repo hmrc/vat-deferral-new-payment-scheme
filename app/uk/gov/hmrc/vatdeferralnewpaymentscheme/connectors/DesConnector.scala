@@ -52,7 +52,6 @@ class DesConnectorImpl @Inject() (
   implicit val headerCarrier: HeaderCarrier = HeaderCarrier(extraHeaders = headers)
 
   import uk.gov.hmrc.http.HttpReadsInstances._
-
   def getObligations(vrn: String): Future[Either[UpstreamErrorResponse, ObligationData]] = {
     val url: String = s"$serviceURL/${appConfig.getObligationsPath.replace("$vrn", vrn)}"
     http.GET[Either[UpstreamErrorResponse, ObligationData]](url) map {

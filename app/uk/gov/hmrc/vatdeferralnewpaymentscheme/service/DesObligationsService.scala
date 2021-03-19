@@ -49,6 +49,7 @@ class DesObligationsService @Inject()(
               )
             }
           )
+        case Left(a) => Left(a)
       }
   }
 
