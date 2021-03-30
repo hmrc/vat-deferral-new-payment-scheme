@@ -32,12 +32,17 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[AuthImpl])
 trait Auth extends AuthorisedFunctions with AuthRedirects with Results {
   def authorised(
-    action: Request[AnyContent] => Future[Result]
+    action: Request[_] => Future[Result]
    )
    (
      implicit ec: ExecutionContext,
      servicesConfig: ServicesConfig
-   ): Action[AnyContent]
+   ): Action[_]
+
+  def authorised2(bodyParser: BodyParser[_])(action: Request[_] => Future[Result])(
+    implicit ec: ExecutionContext,
+    servicesConfig: ServicesConfig
+  ): Action[_]
 }
 
 @Singleton
@@ -47,11 +52,16 @@ class AuthImpl @Inject() (
   val config: Configuration,
   defaultActionBuilder: DefaultActionBuilder) extends Auth {
 
-  def authorised(action: Request[AnyContent] => Future[Result])
+  def authorised(action: Request[_] => Future[Result])
   (
     implicit ec: ExecutionContext,
     servicesConfig: ServicesConfig
-  ): Action[AnyContent] = defaultActionBuilder.async { implicit request =>
+  ): Action[_] = authorised2(BodyParsers.utils.ignore(AnyContentAsEmpty: AnyContent))(action)
+
+  def authorised2(bodyParser: BodyParser[_])(action: Request[_] => Future[Result])
+                   (implicit ec: ExecutionContext, servicesConfig: ServicesConfig): Action[_]=
+
+    defaultActionBuilder.async { implicit request =>
 
     def authHeader: Option[String] =
       for {

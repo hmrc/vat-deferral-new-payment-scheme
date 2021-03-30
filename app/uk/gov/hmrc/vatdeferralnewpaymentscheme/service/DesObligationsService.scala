@@ -20,6 +20,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 import javax.inject.Inject
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesCacheConnector, DesConnector}
 
@@ -38,13 +39,17 @@ class DesObligationsService @Inject()(
       (dueDate.isBefore(appConfig.obligationsDateRangeTo) || dueDate.isEqual(appConfig.obligationsDateRangeTo))
   }
 
-  def getObligationsFromDes(vrn: String): Future[Boolean] = {
-      desConnector.getObligations(vrn).map{ getObl =>
-        getObl.obligations.exists { obl =>
-          obl.obligationDetails.exists(od =>
-            isWithinDateRange(LocalDate.parse(od.inboundCorrespondenceDueDate))
+  def getObligationsFromDes(vrn: String): Future[Either[UpstreamErrorResponse, Boolean]] = {
+      desConnector.getObligations(vrn).map {
+        case Right(getObl) =>
+          Right(
+            getObl.obligations.exists { obl =>
+              obl.obligationDetails.exists(od =>
+                isWithinDateRange(LocalDate.parse(od.inboundCorrespondenceDueDate))
+              )
+            }
           )
-        }
+        case Left(a) => Left(a)
       }
   }
 

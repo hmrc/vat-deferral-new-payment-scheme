@@ -16,10 +16,8 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
-import java.time.format.DateTimeFormatter
-import javax.inject.{Inject, Singleton}
 import play.api.Logger
-import play.api.libs.json.JsValue
+import play.api.libs.json.{JsValue, Reads}
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -32,8 +30,11 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.{DirectDebitArrangementRequest, TtpArrangementAuditWrapper}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{DesDirectDebitService, DirectDebitGenService, FirstPaymentDateService}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{DesDirectDebitService, DirectDebitGenService, FirstPaymentDateService, InstallmentsService}
 
+import java.time.format.DateTimeFormatter
+import java.util.ServiceConfigurationError
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton()
@@ -44,16 +45,19 @@ class DirectDebitArrangementController @Inject()(
   desTimeToPayArrangementConnector: DesTimeToPayArrangementConnector,
   paymentPlanStore: PaymentPlanStore,
   directDebitService: DirectDebitGenService,
-  firstPaymentDateService: FirstPaymentDateService
+  firstPaymentDateService: FirstPaymentDateService,
+  installmentsService: InstallmentsService,
+  auth: Auth
 )(
   implicit ec: ExecutionContext,
-  auditConnector: AuditConnector
+  auditConnector: AuditConnector,
+  servicesConfig: ServicesConfig
 )
   extends BackendController(cc) {
 
   val logger = Logger(this.getClass)
 
-  def post(vrn: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+  def post(vrn: String): Action[JsValue] = auth.authorised2(parse.json) { implicit request =>
     withJsonBody[DirectDebitArrangementRequest] {
       ddar => {
 
@@ -63,6 +67,18 @@ class DirectDebitArrangementController @Inject()(
         for {
           startDate <- firstPaymentDateService.get(vrn).map(_.toLocalDate)
           endDate = startDate.plusMonths(ddar.numberOfPayments - 1)
+          maxInstallments <- installmentsService.installmentPeriodsAvailable(vrn)
+          _ = if (maxInstallments < ddar.numberOfPayments) {
+                 logger.warn(s"someone has too many installments: maxInstallment $maxInstallments, requested: ${ddar.numberOfPayments}")
+                 auditConnector.sendExplicitAudit(
+                   "CreatePaymentPlanFailure",
+                   Map(
+                     "maxInstallments" -> maxInstallments,
+                     "requested" -> ddar.numberOfPayments
+                   )
+                 )
+                throw new IllegalArgumentException(s"Too many installments requested; available: $maxInstallments, requested: ${ddar.numberOfPayments} ")
+              }
           ppr = PaymentPlanRequest(
                   vrn,
                   ddar,
@@ -74,12 +90,12 @@ class DirectDebitArrangementController @Inject()(
           ttpa = TtpArrangement(startDate, endDate, ddar)
           arrangement = TimeToPayArrangementRequest(ttpa, letterAndControl)
           a <- desDirectDebitService.createPaymentPlan(ppr, vrn)
+          _ = if (a.isRight) paymentPlanStore.add(vrn)
           b <- if (a.isRight) desTimeToPayArrangementConnector.createArrangement(vrn, arrangement)
                else Future.successful(Left(UpstreamErrorResponse("fake error", 418)))
         } yield {
           (a,b) match {
             case (Right(ppr:PaymentPlanReference), Right(y)) if y.status == 202 =>
-              paymentPlanStore.add(vrn)
               audit[PaymentPlanReference](
                 "CreatePaymentPlanSuccess",
                 ppr
@@ -95,7 +111,6 @@ class DirectDebitArrangementController @Inject()(
               logger.info("createPaymentPlan and createArrangement has been successful")
               Created
             case (Right(ppr:PaymentPlanReference), Left(e)) =>
-              paymentPlanStore.add(vrn)
               logger.warn(s"unable to set up time to pay arrangement for $vrn, error response: ${e.message}")
               audit[PaymentPlanReference](
                 "CreatePaymentPlanSuccess",

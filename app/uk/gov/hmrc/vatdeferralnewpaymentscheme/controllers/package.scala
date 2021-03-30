@@ -45,6 +45,17 @@ package object controllers {
 
   implicit class FirstPaymentDay(zdt: ZonedDateTime){
 
+
+    val hmrcExcluded = Seq(
+      LocalDate.of(2021, 3, 29),
+      LocalDate.of(2021, 3, 30),
+      LocalDate.of(2021, 3, 31),
+      LocalDate.of(2021, 4, 29),
+      LocalDate.of(2021, 4, 30),
+      LocalDate.of(2021, 5, 27),
+      LocalDate.of(2021, 5, 28),
+    )
+
     // 2021 bank hols 2/4 5/4 3/5 31/5
     val bankHolidays = Seq(
       LocalDate.of(2021, 4, 2),
@@ -60,7 +71,10 @@ package object controllers {
     def isBankHoliday: Boolean =
       bankHolidays.contains(zdt.toLocalDate)
 
-    def nonWorkingDay: Boolean = isWeekend || isBankHoliday
+    def isHmrcExcluded: Boolean =
+      hmrcExcluded.contains(zdt.toLocalDate)
+
+    def nonWorkingDay: Boolean = isWeekend || isBankHoliday || isHmrcExcluded
 
     @tailrec
     final def firstPaymentDate: ZonedDateTime = {

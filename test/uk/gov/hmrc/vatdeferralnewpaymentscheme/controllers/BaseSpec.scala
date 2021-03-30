@@ -26,14 +26,17 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, PaymentPlanStore}
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{DirectDebitGenService, FirstPaymentDateService}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesCacheConnector, DesConnector}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, PaymentPlanStore, TimeToPayRepo, VatMainframeRepo}
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.service._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 class BaseSpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with MockitoSugar {
 
-  val fakeRequest   = FakeRequest("POST", "/")
+  val fakeGet       = FakeRequest("GET","/")
+  val fakePost   = FakeRequest("POST", "/")
   val env           = Environment.simple()
   val configuration = Configuration.load(env, Map("poaUsersEnabledFrom" -> "2021-03-08"))
   val serviceConfig = new ServicesConfig(configuration)
@@ -46,12 +49,21 @@ class BaseSpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with M
 
   val ddService = app.injector.instanceOf[DirectDebitGenService]
   val firstPaymentDateService = app.injector.instanceOf[FirstPaymentDateService]
-  lazy val ppStore = mock[PaymentPlanStore]
+  val installmentsService = app.injector.instanceOf[InstallmentsService]
 
+  lazy val paymentPlanStore = mock[PaymentPlanStore]
   lazy val paymentOnAccountRepo = mock[PaymentOnAccountRepo]
+  lazy val timeToPayRepo = mock[TimeToPayRepo]
+  lazy val vatMainframeRepo = mock[VatMainframeRepo]
+  lazy val desConnector = mock[DesConnector]
+  lazy val desObligationsService =  mock[DesObligationsService]
+  lazy val financialDataService = mock[FinancialDataService]
+  lazy val cacheConnector = mock[DesCacheConnector]
 
   def getConfig(key: String) = serviceConfig.getConfString(key, "")
   lazy val desEnvironment: String = getConfig("des-arrangement-service.environment")
   lazy val authorizationToken: String = s"Bearer ${getConfig("des-arrangement-service.authorization-token")}"
 
+  implicit val defaultTimeout: FiniteDuration = 5 seconds
+  def await[A](future: Future[A])(implicit timeout: Duration): A = Await.result(future, timeout)
 }

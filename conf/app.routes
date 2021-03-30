@@ -1,9 +1,11 @@
 # microservice specific routes
 
-GET        /eligibility/:vrn           uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.EligibilityController.get(vrn: String)
-GET        /financialData/:vrn         uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.FinancialDataController.get(vrn: String)
-GET        /paymentPlan/:vrn           uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.PaymentPlanController.get(vrn: String)
-GET        /firstPaymentDate           uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.FirstPaymentDateController.get(vrn: String = "")
-GET        /firstPaymentDate/:vrn           uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.FirstPaymentDateController.get(vrn: String)
+GET        /eligibility/:vrn                       uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.EligibilityController.get(vrn: String)
+GET        /financialData/:vrn                     uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.FinancialDataController.get(vrn: String)
+GET        /paymentPlan/:vrn                       uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.PaymentPlanController.get(vrn: String)
+GET        /firstPaymentDate                       uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.FirstPaymentDateController.get(vrn: String = "")
+GET        /firstPaymentDate/:vrn                  uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.FirstPaymentDateController.get(vrn: String)
+GET        /installments/canPay/:vrn/:amount       uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.InstallmentsController.canPay(vrn: String, amount:String)
+GET        /installments/available/:vrn/:amount    uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.InstallmentsController.installmentsAvailable(vrn: String, amount:String)
 
 POST       /direct-debit-arrangement/:vrn          uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers.DirectDebitArrangementController.post(vrn: String)
