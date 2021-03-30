@@ -22,6 +22,8 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.http.HttpClient
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.auth.Auth
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.financialdata.FinancialDataResponse
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, VatMainframeRepo}
@@ -31,17 +33,17 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton()
 class FinancialDataController @Inject()(
-  http: HttpClient,
   appConfig: AppConfig,
   cc: ControllerComponents,
   financialDataService: FinancialDataService,
   vatMainframeRepo: VatMainframeRepo,
-  poaRepo: PaymentOnAccountRepo
-)(implicit ec: ExecutionContext) extends BackendController(cc) {
+  poaRepo: PaymentOnAccountRepo,
+  auth: Auth
+)(implicit ec: ExecutionContext, val servicesConfig: ServicesConfig) extends BackendController(cc) {
 
   val logger = Logger(getClass)
 
-  def get(vrn: String): Action[AnyContent] = Action.async {
+  def get(vrn: String): Action[AnyContent] = auth.authorised { implicit request =>
     for {
       poa <- poaRepo.findOne(vrn)
       vmf <- vatMainframeRepo.findOne(vrn)

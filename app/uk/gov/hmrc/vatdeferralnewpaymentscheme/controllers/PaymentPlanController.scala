@@ -21,6 +21,8 @@ import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.auth.Auth
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.PaymentPlan
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.PaymentPlanService
@@ -29,13 +31,13 @@ import scala.concurrent.ExecutionContext
 
 @Singleton()
 class PaymentPlanController @Inject()(
-  appConfig: AppConfig,
   cc: ControllerComponents,
-  paymentPlanService: PaymentPlanService
-)(implicit ec: ExecutionContext) extends BackendController(cc) {
+  paymentPlanService: PaymentPlanService,
+  auth: Auth
+)(implicit ec: ExecutionContext, val servicesConfig: ServicesConfig) extends BackendController(cc) {
   val logger = Logger(getClass)
 
-  def get(vrn: String): Action[AnyContent] = Action.async {
+  def get(vrn: String): Action[AnyContent] = Action.async { implicit request =>
     paymentPlanService.exists(vrn).map { exists => {
       if (exists) {
         logger.info("vrn exists in PaymentPlanService")

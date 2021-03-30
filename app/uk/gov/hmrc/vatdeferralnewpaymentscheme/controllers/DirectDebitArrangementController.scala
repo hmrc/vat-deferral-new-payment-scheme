@@ -17,7 +17,6 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
 import java.time.format.DateTimeFormatter
-
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.JsValue
@@ -25,6 +24,8 @@ import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.auth.Auth
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.DesTimeToPayArrangementConnector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement._

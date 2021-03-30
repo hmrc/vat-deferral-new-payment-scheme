@@ -33,7 +33,7 @@ import scala.concurrent.ExecutionContext
 class FirstPaymentDateController @Inject()(
   cc: ControllerComponents,
   firstPaymentDateService: FirstPaymentDateService,
-  auth: Auth,
+  auth: Auth
 )(
   implicit executionContext: ExecutionContext, val appConfig: AppConfig, val serviceConfig: ServicesConfig
 ) extends BackendController(cc) {

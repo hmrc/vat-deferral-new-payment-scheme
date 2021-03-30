@@ -17,12 +17,15 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
 import cats.implicits._
+
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.auth.Auth
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesCacheConnector, DesConnector}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.eligibility.EligibilityResponse
@@ -35,22 +38,21 @@ import scala.concurrent.{ExecutionContext, Future}
 class EligibilityController @Inject()(
   appConfig: AppConfig,
   cc: ControllerComponents,
-  desConnector: DesConnector,
   desObligationsService: DesObligationsService,
   financialDataService: FinancialDataService,
   paymentOnAccountRepo: PaymentOnAccountRepo,
   timeToPayRepo: TimeToPayRepo,
   vatMainframeRepo: VatMainframeRepo,
   paymentPlanStore: PaymentPlanStore,
-  cacheConnector: DesCacheConnector
+  auth: Auth
 )(
-  implicit ec: ExecutionContext
+  implicit ec: ExecutionContext, val serviceConfig: ServicesConfig
 ) extends BackendController(cc) {
 
   val logger = Logger(getClass)
   val nof: Future[Boolean] = Future.successful(false)
 
-  def get(vrn: String): Action[AnyContent] = Action.async {
+  def get(vrn: String): Action[AnyContent] = auth.authorised { implicit request =>
     (for {
       a <- paymentPlanStore.exists(vrn)
       poaUserEnabled = appConfig.poaUsersEnabled
