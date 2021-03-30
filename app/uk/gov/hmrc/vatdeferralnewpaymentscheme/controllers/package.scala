@@ -54,6 +54,9 @@ package object controllers {
       LocalDate.of(2021, 4, 30),
       LocalDate.of(2021, 5, 27),
       LocalDate.of(2021, 5, 28),
+      // as a fix for 5 working day logic adding 6/4 and 7/4
+      LocalDate.of(2021, 4, 6),
+      LocalDate.of(2021, 4, 7)
     )
 
     // 2021 bank hols 2/4 5/4 3/5 31/5
