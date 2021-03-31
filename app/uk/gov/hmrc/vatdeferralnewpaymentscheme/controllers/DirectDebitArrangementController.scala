@@ -19,7 +19,7 @@ package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 import play.api.Logger
 import play.api.libs.json.{JsValue, Reads}
 import play.api.mvc.{Action, ControllerComponents}
-import uk.gov.hmrc.http.UpstreamErrorResponse
+import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -31,10 +31,11 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.{DirectDebitArrangementRequest, TtpArrangementAuditWrapper}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{DesDirectDebitService, DirectDebitGenService, FirstPaymentDateService, InstallmentsService}
-
 import java.time.format.DateTimeFormatter
 import java.util.ServiceConfigurationError
+
 import javax.inject.{Inject, Singleton}
+
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton()
@@ -57,7 +58,7 @@ class DirectDebitArrangementController @Inject()(
 
   val logger = Logger(this.getClass)
 
-  def post(vrn: String): Action[JsValue] = auth.authorised2(parse.json) { implicit request =>
+  def post(vrn: String): Action[JsValue] = auth.authorisedWithJson(parse.json) { implicit request =>
     withJsonBody[DirectDebitArrangementRequest] {
       ddar => {
 

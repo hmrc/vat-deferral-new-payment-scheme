@@ -20,7 +20,6 @@ import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import uk.gov.hmrc.http.HttpClient
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.auth.Auth
@@ -39,7 +38,10 @@ class FinancialDataController @Inject()(
   vatMainframeRepo: VatMainframeRepo,
   poaRepo: PaymentOnAccountRepo,
   auth: Auth
-)(implicit ec: ExecutionContext, val servicesConfig: ServicesConfig) extends BackendController(cc) {
+)(
+  implicit ec: ExecutionContext,
+  val servicesConfig: ServicesConfig
+) extends BackendController(cc) {
 
   val logger = Logger(getClass)
 

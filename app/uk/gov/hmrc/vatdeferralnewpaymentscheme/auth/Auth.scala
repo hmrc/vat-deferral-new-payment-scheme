@@ -17,74 +17,85 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.auth
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
+import play.api.libs.json.JsValue
 import play.api.mvc._
-import play.api.{Configuration, Environment}
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
-import uk.gov.hmrc.auth.core.retrieve.{Name, ~}
+import uk.gov.hmrc.auth.core.retrieve.{Retrieval, ~}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.HeaderCarrierConverter
-import uk.gov.hmrc.play.bootstrap.config.{AuthRedirects, ServicesConfig}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[AuthImpl])
-trait Auth extends AuthorisedFunctions with AuthRedirects with Results {
-  def authorised(
-    action: Request[_] => Future[Result]
-   )
-   (
-     implicit ec: ExecutionContext,
-     servicesConfig: ServicesConfig
-   ): Action[_]
+trait Auth extends AuthorisedFunctions with Results with BaseController {
 
-  def authorised2(bodyParser: BodyParser[_])(action: Request[_] => Future[Result])(
-    implicit ec: ExecutionContext,
-    servicesConfig: ServicesConfig
-  ): Action[_]
+  type AuthAction[A] = Request[A] => Future[Result]
+
+  def authorised(
+    action: AuthAction[AnyContent]
+  )(
+    implicit ec: ExecutionContext
+  ): Action[AnyContent] = Action.async {implicit request =>
+    authCommon(action)
+  }
+
+  def authorisedWithJson(
+    json:BodyParser[JsValue]
+  )(
+    action: AuthAction[JsValue]
+  )(
+    implicit executionContext: ExecutionContext
+  ): Action[JsValue] = Action.async(json) { implicit request =>
+    authCommon(action)
+  }
+
+  def authCommon[A](
+    action: AuthAction[A]
+  )(
+    implicit request:Request[A],
+    executionContext: ExecutionContext
+  ):Future[Result]
 }
 
 @Singleton
 class AuthImpl @Inject() (
   val authConnector: AuthConnector,
-  val env: Environment,
-  val config: Configuration,
-  defaultActionBuilder: DefaultActionBuilder) extends Auth {
+  val controllerComponents: ControllerComponents
+) extends Auth {
 
-  def authorised(action: Request[_] => Future[Result])
-  (
-    implicit ec: ExecutionContext,
-    servicesConfig: ServicesConfig
-  ): Action[_] = authorised2(BodyParsers.utils.ignore(AnyContentAsEmpty: AnyContent))(action)
+  val authProvider: AuthProviders = AuthProviders(GovernmentGateway, PrivilegedApplication)
+  val retrievals: Retrieval[Enrolments ~ Enrolments] = Retrievals.allEnrolments and Retrievals.authorisedEnrolments
 
-  def authorised2(bodyParser: BodyParser[_])(action: Request[_] => Future[Result])
-                   (implicit ec: ExecutionContext, servicesConfig: ServicesConfig): Action[_]=
-
-    defaultActionBuilder.async { implicit request =>
-
+  def authCommon[A](
+    action: AuthAction[A]
+  )(
+    implicit request:Request[A],
+    executionContext: ExecutionContext
+  ):Future[Result] = {
     def authHeader: Option[String] =
       for {
         auth <- request.headers.get("Authorization")
       } yield {
         auth
       }
-
     authHeader match {
-      case Some(authorization) =>
+      case Some(authorization) => {
         implicit val hc: HeaderCarrier = HeaderCarrierConverter
           .fromHeadersAndSessionAndRequest(request.headers, Some(request.session), Some(request))
           .withExtraHeaders(("Authorization", authorization))
 
-        authorised(AuthProviders(GovernmentGateway, PrivilegedApplication))
-          .retrieve(Retrievals.allEnrolments and Retrievals.authorisedEnrolments) { _ => action(request)
-          }.recoverWith {
+        authorised(authProvider).retrieve(retrievals){ _ =>
+          action(request)
+        }.recoverWith {
           case _: NoActiveSession =>
             Future.successful(Unauthorized("No active session"))
           case _: InsufficientEnrolments =>
             Future.successful(Unauthorized("Insufficient Enrolments"))
         }
-      case _ => Future.successful(BadRequest("Authorization header missing"))
+      }
+      case _ => Future.successful(Forbidden("Authorization header missing"))
     }
   }
 }

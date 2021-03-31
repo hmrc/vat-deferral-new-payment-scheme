@@ -25,7 +25,9 @@ import play.api.test.{FakeRequest, Helpers}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import org.scalatestplus.mockito.MockitoSugar
+import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.auth.{Auth, FakeAuth}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesCacheConnector, DesConnector}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, PaymentPlanStore, TimeToPayRepo, VatMainframeRepo}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service._
@@ -39,7 +41,7 @@ class BaseSpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with M
   val fakePost   = FakeRequest("POST", "/")
   val env           = Environment.simple()
   val configuration = Configuration.load(env, Map("poaUsersEnabledFrom" -> "2021-03-08"))
-  val serviceConfig = new ServicesConfig(configuration)
+  implicit val serviceConfig = new ServicesConfig(configuration)
   val appConfig     = new AppConfig(configuration, serviceConfig)
   val cc            = Helpers.stubControllerComponents()
 
@@ -50,6 +52,8 @@ class BaseSpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with M
   val ddService = app.injector.instanceOf[DirectDebitGenService]
   val firstPaymentDateService = app.injector.instanceOf[FirstPaymentDateService]
   val installmentsService = app.injector.instanceOf[InstallmentsService]
+
+  val auth = new FakeAuth(cc)
 
   lazy val paymentPlanStore = mock[PaymentPlanStore]
   lazy val paymentOnAccountRepo = mock[PaymentOnAccountRepo]

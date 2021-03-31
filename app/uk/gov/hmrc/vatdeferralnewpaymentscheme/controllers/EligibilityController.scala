@@ -17,7 +17,6 @@
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
 import cats.implicits._
-
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
@@ -27,7 +26,6 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.auth.Auth
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesCacheConnector, DesConnector}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.eligibility._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.{PaymentOnAccount, VatMainframe}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, PaymentPlanStore, TimeToPayRepo, VatMainframeRepo}
@@ -47,7 +45,8 @@ class EligibilityController @Inject()(
   paymentPlanStore: PaymentPlanStore,
   auth: Auth
 )(
-  implicit ec: ExecutionContext, val serviceConfig: ServicesConfig
+  implicit ec: ExecutionContext,
+  val serviceConfig: ServicesConfig
 ) extends BackendController(cc) {
 
   val logger = Logger(getClass)
@@ -75,7 +74,7 @@ class EligibilityController @Inject()(
     }
   }
 
-  def get(vrn: String): Action[AnyContent] = auth.authorised { implicit request =>
+  def get(vrn: String): Action[AnyContent] = auth.authorised { _ =>
     (for {
       a <- paymentPlanStore.exists(vrn)
       c <- if (a) nof else timeToPayRepo.exists(vrn)
