@@ -16,16 +16,14 @@
 
 package uk.gov.hmrc.vatdeferralnewpaymentscheme.controllers
 
-import java.time.format.DateTimeFormatter
-
-import cats.implicits._
-import javax.inject.{Inject, Singleton}
 import play.api.Logger
-import play.api.libs.json.JsValue
+import play.api.libs.json.{JsValue, Reads}
 import play.api.mvc.{Action, ControllerComponents}
-import uk.gov.hmrc.http.UpstreamErrorResponse
+import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.auth.Auth
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.DesTimeToPayArrangementConnector
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.arrangement._
@@ -33,6 +31,10 @@ import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.directdebit._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.{DirectDebitArrangementRequest, TtpArrangementAuditWrapper}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.PaymentPlanStore
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.{DesDirectDebitService, DirectDebitGenService, FirstPaymentDateService, InstallmentsService}
+import java.time.format.DateTimeFormatter
+import java.util.ServiceConfigurationError
+
+import javax.inject.{Inject, Singleton}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -45,16 +47,18 @@ class DirectDebitArrangementController @Inject()(
   paymentPlanStore: PaymentPlanStore,
   directDebitService: DirectDebitGenService,
   firstPaymentDateService: FirstPaymentDateService,
-  installmentsService: InstallmentsService
+  installmentsService: InstallmentsService,
+  auth: Auth
 )(
   implicit ec: ExecutionContext,
-  auditConnector: AuditConnector
+  auditConnector: AuditConnector,
+  servicesConfig: ServicesConfig
 )
   extends BackendController(cc) {
 
   val logger = Logger(this.getClass)
 
-  def post(vrn: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+  def post(vrn: String): Action[JsValue] = auth.authorisedWithJson(parse.json) { implicit request =>
     withJsonBody[DirectDebitArrangementRequest] {
       ddar => {
 

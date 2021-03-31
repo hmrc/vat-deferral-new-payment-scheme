@@ -21,6 +21,9 @@ import javax.inject.Singleton
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.auth.Auth
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.service.FirstPaymentDateService
 
 import scala.concurrent.ExecutionContext
@@ -28,12 +31,15 @@ import scala.concurrent.ExecutionContext
 @Singleton
 class FirstPaymentDateController @Inject()(
   cc: ControllerComponents,
-  firstPaymentDateService: FirstPaymentDateService
+  firstPaymentDateService: FirstPaymentDateService,
+  auth: Auth
 )(
-  implicit executionContext: ExecutionContext
+  implicit executionContext: ExecutionContext,
+  val appConfig: AppConfig,
+  val serviceConfig: ServicesConfig
 ) extends BackendController(cc) {
 
-  def get(vrn: String): Action[AnyContent] = Action.async {
+  def get(vrn: String): Action[AnyContent] = auth.authorised { _ =>
     firstPaymentDateService.get(vrn).map(x => Ok(Json.toJson(x)))
   }
 }
