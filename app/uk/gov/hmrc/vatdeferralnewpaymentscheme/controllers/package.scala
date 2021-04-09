@@ -24,6 +24,7 @@ import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
+import scala.language.implicitConversions
 
 package object controllers {
 
@@ -45,7 +46,6 @@ package object controllers {
 
   implicit class FirstPaymentDay(zdt: ZonedDateTime){
 
-
     val hmrcExcluded = Seq(
       LocalDate.of(2021, 3, 29),
       LocalDate.of(2021, 3, 30),
@@ -53,7 +53,7 @@ package object controllers {
       LocalDate.of(2021, 4, 29),
       LocalDate.of(2021, 4, 30),
       LocalDate.of(2021, 5, 27),
-      LocalDate.of(2021, 5, 28),
+      LocalDate.of(2021, 5, 28)
     )
 
     // 2021 bank hols 2/4 5/4 3/5 31/5
@@ -74,17 +74,25 @@ package object controllers {
     def isHmrcExcluded: Boolean =
       hmrcExcluded.contains(zdt.toLocalDate)
 
-    def nonWorkingDay: Boolean = isWeekend || isBankHoliday || isHmrcExcluded
+    def isNonWorkingDay: Boolean = isWeekend || isBankHoliday
 
+    def isUnacceptableDay: Boolean = isWeekend || isBankHoliday || isHmrcExcluded
+
+    def firstPaymentDate: ZonedDateTime = firstPaymentDate()
+
+    // N.b. gives us a date 5 working days from now unless that date is hmrcExcluded.
+    // If 5 working days from now is hmrcExcluded gives us the next working day after that.
     @tailrec
-    final def firstPaymentDate: ZonedDateTime = {
-      val pdt = zdt.plusDays(7)
-      pdt match {
-        case dt if dt.nonWorkingDay =>
-          zdt.plusDays(1).firstPaymentDate
-        case _ =>
-          pdt
+    private final def firstPaymentDate(workingDayCount: Int = 0): ZonedDateTime = {
+      (zdt, workingDayCount) match {
+        case (d, i) if i >= 5 && !d.isUnacceptableDay => d
+        case (d, i) => d.plusDays(1).firstPaymentDate(i + d)
       }
     }
+
+    private implicit def workDayCountable(zdt: ZonedDateTime): Int =
+      if (zdt.isNonWorkingDay) 0
+      else 1
+
   }
 }

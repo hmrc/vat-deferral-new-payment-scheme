@@ -23,8 +23,9 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.auth.Auth
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
-import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesCacheConnector, DesConnector}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.eligibility._
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.fileimport.{PaymentOnAccount, VatMainframe}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.repo.{PaymentOnAccountRepo, PaymentPlanStore, TimeToPayRepo, VatMainframeRepo}
@@ -36,16 +37,16 @@ import scala.concurrent.{ExecutionContext, Future}
 class EligibilityController @Inject()(
   appConfig: AppConfig,
   cc: ControllerComponents,
-  desConnector: DesConnector,
   desObligationsService: DesObligationsService,
   financialDataService: FinancialDataService,
   paymentOnAccountRepo: PaymentOnAccountRepo,
   timeToPayRepo: TimeToPayRepo,
   vatMainframeRepo: VatMainframeRepo,
   paymentPlanStore: PaymentPlanStore,
-  cacheConnector: DesCacheConnector
+  auth: Auth
 )(
-  implicit ec: ExecutionContext
+  implicit ec: ExecutionContext,
+  val serviceConfig: ServicesConfig
 ) extends BackendController(cc) {
 
   val logger = Logger(getClass)
@@ -73,7 +74,7 @@ class EligibilityController @Inject()(
     }
   }
 
-  def get(vrn: String): Action[AnyContent] = Action.async {
+  def get(vrn: String): Action[AnyContent] = auth.authorised { _ =>
     (for {
       a <- paymentPlanStore.exists(vrn)
       c <- if (a) nof else timeToPayRepo.exists(vrn)

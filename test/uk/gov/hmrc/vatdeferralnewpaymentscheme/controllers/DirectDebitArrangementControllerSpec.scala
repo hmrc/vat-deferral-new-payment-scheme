@@ -89,7 +89,7 @@ class DirectDebitArrangementControllerSpec extends BaseSpec {
     paymentPlanStore,
     ddService,
     firstPaymentDateService,
-    installmentsService
+    installmentsService,
+    auth
   )
-
 }

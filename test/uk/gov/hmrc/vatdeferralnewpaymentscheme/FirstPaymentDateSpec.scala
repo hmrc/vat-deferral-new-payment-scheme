@@ -67,16 +67,17 @@ class FirstPaymentDateSpec extends AnyWordSpec with Matchers {
       }
     }
 
-    "A week from today is a bank holiday" should {
-      "be the following working day" in {
-        assertDates("2021-03-26", "2021-04-06")
-        assertDates("2021-03-29", "2021-04-06")
+    "there are bank holidays" should {
+      "be at least five working days from now" in {
+        assertDates("2021-03-30", "2021-04-08")
+        assertDates("2021-03-31", "2021-04-09")
+        assertDates("2021-04-01", "2021-04-12")
         assertDates("2021-04-26", "2021-05-04")
         assertDates("2021-05-24", "2021-06-01")
       }
     }
 
-    "A week from today is an HMRC excluded" should {
+    "is an HMRC excluded day" should {
       "be the following working day" in {
         assertDates("2021-03-20", "2021-04-01")
         assertDates("2021-03-21", "2021-04-01")

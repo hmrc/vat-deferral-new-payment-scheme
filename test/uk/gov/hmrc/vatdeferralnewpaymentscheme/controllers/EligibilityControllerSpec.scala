@@ -23,6 +23,7 @@ import play.api.mvc.{ControllerComponents, Result}
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 import uk.gov.hmrc.http.UpstreamErrorResponse
+import uk.gov.hmrc.vatdeferralnewpaymentscheme.auth.Auth
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.config.AppConfig
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.connectors.{DesCacheConnector, DesConnector}
 import uk.gov.hmrc.vatdeferralnewpaymentscheme.model.eligibility.EligibilityResponse
@@ -148,13 +149,12 @@ class EligibilityControllerSpec extends BaseSpec {
   def testController = new  EligibilityController(
     appConfig: AppConfig,
     cc: ControllerComponents,
-    desConnector: DesConnector,
     desObligationsService: DesObligationsService,
     financialDataService: FinancialDataService,
     paymentOnAccountRepo: PaymentOnAccountRepo,
     timeToPayRepo: TimeToPayRepo,
     vatMainframeRepo: VatMainframeRepo,
     paymentPlanStore: PaymentPlanStore,
-    cacheConnector: DesCacheConnector
+    auth: Auth
   )
 }
