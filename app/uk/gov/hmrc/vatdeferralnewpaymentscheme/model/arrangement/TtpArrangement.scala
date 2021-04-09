@@ -46,7 +46,12 @@ object TtpArrangement {
     val reviewDate = endDate.plusWeeks(3)
     val dd: Seq[DebitDetails] = (0 until ddar.numberOfPayments).map {
       month => {
-        DebitDetails("IN2", startDate.withDayOfMonth(ddar.paymentDay).plusMonths(month).toString)
+
+        val installmentDate =
+          if (month == 0) startDate
+          else startDate.withDayOfMonth(ddar.paymentDay).plusMonths(month)
+
+        DebitDetails("IN2", installmentDate.toString)
       }
     }
 
