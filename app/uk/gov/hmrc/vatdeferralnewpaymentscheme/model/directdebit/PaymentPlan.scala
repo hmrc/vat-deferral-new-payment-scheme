@@ -25,9 +25,9 @@ case class PaymentPlan(
   paymentReference:          String,
   initialPaymentAmount:      String,
   initialPaymentStartDate:   LocalDate,
-  scheduledPaymentAmount:    Option[String],
-  scheduledPaymentStartDate: Option[LocalDate],
-  scheduledPaymentEndDate:   Option[LocalDate],
+  scheduledPaymentAmount:    String,
+  scheduledPaymentStartDate: LocalDate,
+  scheduledPaymentEndDate:   LocalDate,
   totalLiability:            String,
   balancingPaymentDate:      LocalDate,
   balancingPaymentAmount:    String,
@@ -44,16 +44,22 @@ object PaymentPlan {
     ddar: DirectDebitArrangementRequest,
     startDate: LocalDate,
     endDate: LocalDate
-  ): PaymentPlan =     PaymentPlan(
-    vrn,
-    ddar.firstPaymentAmount.toString,
-    startDate,
-    if (ddar.numberOfPayments > 2) Some(ddar.scheduledPaymentAmount.toString) else None,
-    if (ddar.numberOfPayments > 2) Some(startDate.withDayOfMonth(ddar.paymentDay).plusMonths(1)) else None,
-    if (ddar.numberOfPayments > 2) Some(endDate.withDayOfMonth(ddar.paymentDay).minusMonths(1)) else None,
-    ddar.totalAmountToPay.toString,
-    endDate.withDayOfMonth(ddar.paymentDay),
-    ddar.scheduledPaymentAmount.toString
+  ): PaymentPlan = PaymentPlan(
+    paymentReference          = vrn,
+    initialPaymentAmount      = ddar.firstPaymentAmount.toString,
+    initialPaymentStartDate   = startDate,
+    scheduledPaymentAmount    = ddar.scheduledPaymentAmount.toString,
+    scheduledPaymentStartDate = if (ddar.numberOfPayments > 2)
+                                  startDate.withDayOfMonth(ddar.paymentDay).plusMonths(1)
+                                else
+                                  endDate.withDayOfMonth(ddar.paymentDay),
+    scheduledPaymentEndDate   = if (ddar.numberOfPayments > 2)
+                                  endDate.withDayOfMonth(ddar.paymentDay).minusMonths(1)
+                                else
+                                  endDate.withDayOfMonth(ddar.paymentDay),
+    totalLiability            = ddar.totalAmountToPay.toString,
+    balancingPaymentDate      = endDate.withDayOfMonth(ddar.paymentDay),
+    balancingPaymentAmount    = ddar.scheduledPaymentAmount.toString
   )
 
   implicit val format = Json.format[PaymentPlan]
